@@ -1,0 +1,6 @@
+.idea
+.vscode
+*.pyc
+venv
+data/*
+models/checkpoints/*
