@@ -18,7 +18,7 @@ def crop_center(img,cropy,cropx):
     return img[starty:starty+cropy, startx:startx+cropx, :]
 
 
-def named_folders(base_dir, phase, prepare_features=None, class_idx={}, crop_roi=None, file_extension=".png", overwrite_cashe=False):
+def named_folders(base_dir, phase, prepare_features=None, class_idx={}, crop_roi=None, file_extension=".png", overwrite_cache=False):
     if phase is not None:
         classes_dir = os.path.join(base_dir, phase)
     if phase is None:
@@ -27,7 +27,7 @@ def named_folders(base_dir, phase, prepare_features=None, class_idx={}, crop_roi
     images = []
     labels = []
 
-    if overwrite_cashe:
+    if overwrite_cache:
         if os.path.exists(os.path.join(classes_dir, "images.json")):
             os.remove(os.path.join(classes_dir, "images.json"))
         if os.path.exists(os.path.join(classes_dir, "labels.json")):
