@@ -72,7 +72,7 @@ Some samples that should help getting into stuff.
 Code:
 
 1. MNIST [TODO]
-2. LFW [TODO]
+2. [LFW](examples/lfw_example.py)
 3. Imagenet (Baselines) [TODO]
 4. Bounding Box Regression [TODO]
 5. Segmentations [TODO]
