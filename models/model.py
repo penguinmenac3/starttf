@@ -38,15 +38,15 @@ class Model(object):
         pass
 
     @abc.abstractmethod
-    def fit(self, training_data, epochs, validation_data=None, summary_iters=1000, verbose=True):
+    def fit(self, training_data, iters, validation_data=None, summary_iters=1000, verbose=True):
         """
         Fit the model to given training data.
 
-        :param training_data: TODO
-        :param validation_data: TODO (This data is optional, if not provided no validation is done.)
-        :param epochs: The number of epochs to train in total.
-        :param summary_iters: How many epochs to do between two summaries.
-        :param verbose: If you want debug outputs or not.
+        :param training_data: training_data TODO
+        :param validation_data: validation_data TODO (This data is optional, if not provided no validation is done.)
+        :param iters: iters The number of epochs to train in total.
+        :param summary_iters: summary_iters How many epochs to do between two summaries.
+        :param verbose: verbose If you want debug outputs or not.
         """
         pass
 
