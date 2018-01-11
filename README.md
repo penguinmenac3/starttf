@@ -44,7 +44,9 @@ To get you started quickly.
 
 ## Models
 
-There are also some models implemented to tinker around with.
+Every [model](models/model.py) supports setup, predict, fit and export methods.
+
+There are some models implemented to tinker around with.
 Most of the implementations are not done by me from scratch but rather refactoring of online found implementations.
 Also the common models will come with pre trained weights I found on the internet.
 Just check the comment at the top of their source files.
