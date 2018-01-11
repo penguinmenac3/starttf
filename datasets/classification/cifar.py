@@ -53,20 +53,17 @@ def cifar(base_dir, phase, version=10):
                 img = np.reshape(images[idx], (3, 32, 32))
                 yield (img.transpose((1, 2, 0)), labels[idx])
 
-    return images_per_class, gen()
+    return gen()
 
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    imgs_per_class, gen = cifar("data/cifar-10", "train")
+    train_data = cifar("data/cifar-10", "train")
 
-    print("Classes and image count:")
-    print(imgs_per_class)
-
-    img, class_name = next(gen)
+    img, label = next(train_data)
     print("Image shape:")
     print(img.shape)
 
-    for img, class_name in gen:
+    for img, label in train_data:
         plt.imshow(img)
         plt.show()
