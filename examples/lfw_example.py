@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 from datasets.classification.named_folders import named_folders
-from models.model import Model
+from models.lfw import LFWNetwork
 
 
 def main():
@@ -13,7 +13,7 @@ def main():
 
     print("Create model")
     # TODO use a real model
-    model = Model(hyper_params_filepath)
+    model = LFWNetwork(hyper_params_filepath)
 
     # Define how much gpu memory to allow for training.
     config = tf.ConfigProto()
