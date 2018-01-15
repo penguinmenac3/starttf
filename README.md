@@ -7,6 +7,12 @@ The idea is that if you use existing dataset loaders and networks and only modif
 
 ## Install
 
+First clone the repository **recursively**!
+
+```bash
+git clone --recursive https://github.com/penguinmenac3/tensorflow-starterpack.git
+```
+
 Simply create a new python virtual environment (preferably python 3.x) and install the requirements listed in the [requirements.txt](requirements.txt).
 Properly install tensorflow-gpu please follow the [official instructions](https://www.tensorflow.org/install/) carefully.
 
@@ -25,22 +31,16 @@ Or launch your code from the command line like the example bellow.
 
 ## Datasets
 
-There are handlers for several datasets.
-To get you started quickly.
+For dataset support I use my own dataset library including bindings to load many popular datasets in a unified format.
 
-1. [Named Folders (Foldername = Label)](datasets/classification/named_folders.py)
-2. [MNIST](datasets/classification/mnist.py)
-3. ImageNet [TODO]
-4. Coco [TODO]
-5. [Cifar10/Cifar100](datasets/classification/cifar.py)
-6. [LFW (named folders)](datasets/classification/named_folders.py)
-6. PASCAL VOC [TODO]
-7. Places [TODO]
-8. Kitti [TODO]
-9. Tensorbox [TODO]
-10. CamVid [TODO]
-11. Cityscapes [TODO]
-12. ROS-Robot (as data source) [TODO]
+However, to use it you will need to initialize git submodules if you did not do a recursive clone:
+
+```bash
+git submodule update --init --recursive
+```
+
+The dataset loader basically supports **classification**, **segmentation**, **regression** (including **2d- and 3d-detection**) and some visualization helpers.
+For details checkout the readme of the project [**here**](https://github.com/penguinmenac3/datasets/blob/master/README.md).
 
 ## Models
 
