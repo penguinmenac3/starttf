@@ -2,6 +2,7 @@ import json
 import abc
 
 from utils.dict2obj import Dict2Obj
+import tensorflow as tf
 
 
 class Model(object):
@@ -16,8 +17,12 @@ class Model(object):
         :param hyper_params_filepath: The path to the hyper parameters file
         """
         self.hyper_params = Dict2Obj(json.load(open(hyper_params_filepath)))
+        self.model_train = None
+        self.model_validation = None
+        self.sess = None
+        self.feed_dict = {}
+        self.outputs = {}
 
-    @abc.abstractmethod
     def setup(self, session):
         """
         Initialize everything for the model that needs a session.
@@ -25,9 +30,22 @@ class Model(object):
 
         :param session: The tensorflow session to live inside.
         """
+        self.sess = session
+
+    @abc.abstractmethod
+    def _create_model(self, input_tensor, reuse_weights):
+        """
+            Create a model.
+        """
         pass
 
     @abc.abstractmethod
+    def _create_loss(self, labels, validation_labels=None):
+        """
+            Create a loss.
+        """
+        pass
+
     def predict(self, features):
         """
         Predict the output of the network given only the feature input.
@@ -37,21 +55,62 @@ class Model(object):
         """
         pass
 
-    @abc.abstractmethod
-    def fit(self, training_data, iters, validation_data=None, summary_iters=1000, verbose=True):
+    def fit(self, features, labels, validation_examples_num=0, validation_features=None, validation_labels=None, verbose=True):
         """
         Fit the model to given training data.
 
-        :param training_data: training_data TODO
-        :param validation_data: validation_data TODO (This data is optional, if not provided no validation is done.)
+        :param features: features An input queue tensor as provided by prepare_training.read_tf_records(...).
+        :param labels: labels An input queue tensor as provided by prepare_training.read_tf_records(...).
+        :param validation_features: validation_features An input queue tensor. (This data is optional, if not provided no validation is done.)
+        :param validation_labels: validation_labels An input queue tensor. (This data is optional, if not provided no validation is done.)
         :param iters: iters The number of epochs to train in total.
         :param summary_iters: summary_iters How many epochs to do between two summaries.
         :param verbose: verbose If you want debug outputs or not.
         """
-        pass
+        self.model_train      = self._create_model(features, reuse_weights=False)
+        self.model_validation = self._create_model(validation_features, reuse_weights=True)
 
+        # Create loss and training op.
+        train_op, loss_op, validation_loss_op = self._create_loss(labels, validation_labels)
 
-    @abc.abstractmethod
+        # Init vars.
+        init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
+        self.sess.run(init_op)
+
+        # Prepare training.
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(coord=coord, sess=self.sess)
+        saver = tf.train.Saver()
+
+        # Train
+        acc_loss = 0.0
+        for i_step in range(self.hyper_params.train.iters):
+
+            # Train step.
+            _, loss = self.sess.run([train_op, loss_op], feed_dict=self.feed_dict)
+            acc_loss += loss
+
+            # Do validation and summary.
+            if i_step % self.hyper_params.train.summary_iters == 0:
+                loss_val = 0.0
+                if validation_examples_num > 0:
+                    for i_val in range(int(validation_examples_num / self.hyper_params.train.batch_size)):
+                        loss_val_loc = self.sess.run([validation_loss_op], feed_dict=self.feed_dict)[0]
+                        loss_val += loss_val_loc / float(self.hyper_params.train.batch_size)
+                    loss_val /= float(validation_examples_num)
+
+                if verbose:
+                    print("Iter: %d, Loss: %.4f, Validation Loss: %.4f" % (i_step, acc_loss / float(self.hyper_params.train.batch_size) / float(self.hyper_params.train.summary_iters), loss_val))
+                    acc_loss = 0.0
+
+                saver.save(self.sess, self.hyper_params.train.checkpoint_path, global_step=i_step)
+
+        if verbose:
+            print("Training stopped.")
+
+        coord.request_stop()
+        coord.join(threads)
+
     def export(self):
         """
         Export the model for deployment.

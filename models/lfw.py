@@ -1,45 +1,31 @@
+import numpy as np
+
+import tensorflow as tf
+
 from models.model import Model
 
 class LFWNetwork(Model):
     def __init__(self, hyper_params_filepath):
-        pass
+        super(LFWNetwork, self).__init__(hyper_params_filepath)
 
+    def _create_model(self, input_tensor, reuse_weights):        
+        with tf.variable_scope('NeuralNet') as scope:
+            if reuse_weights:
+                scope.reuse_variables()
 
-    def setup(self, session):
-        """
-        Initialize everything for the model that needs a session.
-        This includes loading checkpoints if provided in the hyperparameters.
+            # TODO define net architecture.
+            
+            self.outputs["logits"] = input_tensor
 
-        :param session: The tensorflow session to live inside.
-        """
-        pass
+    def _create_loss(self, labels, validation_labels=None):
+        labels = tf.reshape(labels, [-1, self.hyper_params.arch.output_dimension])
+        loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.outputs["logits"], labels=labels))
+        train_op = tf.train.RMSPropOptimizer(learning_rate=self.hyper_params.train.learning_rate, decay=self.hyper_params.train.decay).minimize(loss_op)
 
-    def predict(self, features):
-        """
-        Predict the output of the network given only the feature input.
-        This is handy for deployment of the network.
+        # Create a validation loss if possible.
+        validation_loss_op = None
+        if validation_labels is not None:
+            validation_labels = tf.reshape(validation_labels, [-1, self.hyper_params.arch.output_dimension])
+            validation_loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.outputs["logits"], labels=validation_labels))
 
-        :param features: The input features of the network. For a cnn this is an image.
-        """
-        pass
-
-    def fit(self, training_data, iters, validation_data=None, summary_iters=1000, verbose=True):
-        """
-        Fit the model to given training data.
-
-        :param training_data: training_data TODO
-        :param validation_data: validation_data TODO (This data is optional, if not provided no validation is done.)
-        :param iters: iters The number of epochs to train in total.
-        :param summary_iters: summary_iters How many epochs to do between two summaries.
-        :param verbose: verbose If you want debug outputs or not.
-        """
-        pass
-
-
-    def export(self):
-        """
-        Export the model for deployment.
-
-        The exported models can be used in an android app or a rosnode.
-        """
-        pass
+        return train_op, loss_op, validation_loss_op
