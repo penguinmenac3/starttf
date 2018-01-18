@@ -1,9 +1,9 @@
 import math
-
+import os
 import tensorflow as tf
 
 from datasets.classification.function_generator import function_generator
-from utils.prepare_training import write_tf_records, read_tf_records
+from utils.prepare_training import write_tf_records, read_tf_records, PHASE_TRAIN, PHASE_VALIDATION
 from models.gru_function_classifier import FunctionClassifier
 
 
@@ -17,11 +17,13 @@ def main():
     training_examples_number = 10000
     validation_examples_number = 1000
 
-    if GENERATE_DATA:
+    if GENERATE_DATA or not os.path.exists(data_tmp_folder):
+        if not os.path.exists(data_tmp_folder):
+            os.makedirs(data_tmp_folder)
         # Create training data.
         print("Generating data")
         train_data = function_generator([lambda x, off: math.sin(x / 50.0 + off), lambda x, off: x / 50.0 + off], 100, training_examples_number)
-        validation_data  = function_generator([lambda x, off: math.sin(x / 50.0 + off), lambda x, off: x / 50.0 + off], 100, validation_examples_number)
+        validation_data = function_generator([lambda x, off: math.sin(x / 50.0 + off), lambda x, off: x / 50.0 + off], 100, validation_examples_number)
 
         # Write tf records
         print("Writing data")
@@ -33,8 +35,8 @@ def main():
 
     # Load data with tf records.
     print("Loading data")
-    train_features, train_labels = read_tf_records(data_tmp_folder, "train", model.hyper_params.train.batch_size, (100,), (2,), tf.float32, tf.uint8, 4)
-    validation_features, validation_labels = read_tf_records(data_tmp_folder, "validation", model.hyper_params.train.batch_size, (100,), (2,), tf.float32, tf.uint8, 2)
+    train_features, train_labels = read_tf_records(data_tmp_folder, PHASE_TRAIN, model.hyper_params.train.batch_size)
+    validation_features, validation_labels = read_tf_records(data_tmp_folder, PHASE_VALIDATION, model.hyper_params.train.batch_size)
 
     # Limit used gpu memory.
     config = tf.ConfigProto()
