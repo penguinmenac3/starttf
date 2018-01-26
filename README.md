@@ -1,4 +1,4 @@
-# Tensorflow - Starterpack
+# Tensorflow - Starterpack [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 This repo aims to contain everything required to quickly develop a deep neural network with tensorflow.
 It comes with several dataset loaders and network architectures.
