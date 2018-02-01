@@ -1,7 +1,8 @@
 .idea
 .vscode
 data
-models/checkpoints/*
+tf_models/checkpoints/*
+keras_models/weights/*
 
 nonpublic/*
 
