@@ -1,7 +1,9 @@
 .idea
 .vscode
-data/*
+data
 models/checkpoints/*
+
+nonpublic/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
