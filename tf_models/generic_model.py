@@ -1,4 +1,4 @@
-from models.model import Model
+from tf_models.model import Model
 
 
 class GenericModel(Model):

@@ -6,6 +6,9 @@ from utils.plot_losses import PlotLosses
 import time
 import datetime
 import numpy as np
+from datasets.tfrecords import PHASE_VALIDATION, PHASE_TRAIN
+from datasets.batch_generator import batch_generator
+import os
 
 # Data can be downloaded here:
 #   http://vis-www.cs.umass.edu/lfw/#download
@@ -15,23 +18,19 @@ import numpy as np
 
 if __name__ == "__main__":
     time_str = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
+    model_output_folder = "keras_models/weights/deeplfw"
+    if not os.path.exists(model_output_folder):
+        os.makedirs(model_output_folder)
 
     print("\nLoading Dataset...")
     roi = (200, 200)
-    imgs_per_class, images, labels, class_idx = named_folders("data/lfw-deepfunneled", phase=None, prepare_features=prepare_data, crop_roi=roi)
-    # TODO  Do a usefull test split instead of loading the same data twice!!!
-    test_imgs_per_class, test_images, test_labels, test_class_idx = named_folders("data/lfw-deepfunneled", phase=None, prepare_features=prepare_data, crop_roi=roi)
-
-    print("Train Classes and image count:")
-    print(imgs_per_class)
-
-    print("Test Classes and image count:")
-    print(test_imgs_per_class)
+    train_data = named_folders("data/lfw-deepfunneled", phase=PHASE_TRAIN, prepare_features=prepare_data, crop_roi=roi, no_split_folder=10)
+    validation_data = named_folders("data/lfw-deepfunneled", phase=PHASE_VALIDATION, prepare_features=prepare_data, crop_roi=roi, no_split_folder=10)
 
     print("\nCreating Model: deeplfw")
     model = deeplfw()
-    plot_model(model, to_file='models/weights/deeplfw_architecture_%s.png' % time_str, show_shapes=True)
-    print("Saved structure in: models/weights/deeplfw_architecture_%s.png" % time_str)
+    plot_model(model, to_file='keras_models/weights/deeplfw/architecture_%s.png' % time_str, show_shapes=True)
+    print("Saved structure in: keras_models/weights/deeplfw/architecture_%s.png" % time_str)
 
     print("\nCreate SGD Optimizer")
     sgd = SGD(lr=0.001, decay=1e-6, momentum=0.9, nesterov=True)
@@ -39,17 +38,13 @@ if __name__ == "__main__":
     model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=["accuracy"])
 
     print("\nFit model...")
-    plot_losses = PlotLosses("models/weights/deeplfw_loss_%s.png" % time_str,
-                             "models/weights/deeplfw_acc_%s.png" % time_str,
-                             validation_data=(test_images, test_labels))
+    plot_losses = PlotLosses("keras_models/weights/deeplfw/loss_%s.png" % time_str,
+                             "keras_models/weights/deeplfw/acc_%s.png" % time_str,
+                             validation_data=batch_generator(validation_data))
 
-    triplet_in, triplet_out = create_triplets(images, labels, model)
-    model.fit(x=triplet_in, y=triplet_out, batch_size=64, epochs=200, callbacks=[plot_losses], validation_data=(test_images, test_labels), verbose=0)
+    model.fit_generator(batch_generator(create_triplets(train_data, model), batch_size=256), steps_per_epoch=20, nb_epoch=200, callbacks=[plot_losses], verbose=0)
 
     model_json = model.to_json()
-    with open("models/weights/deeplfw_%s.json" % time_str, "w") as json_file:
+    with open("keras_models/weights/deeplfw/%s.json" % time_str, "w") as json_file:
         json_file.write(model_json)
-    model.save_weights("models/weights/deeplfw_%s.h5" % time_str)
-
-    classes = np.argmax(model.predict(test_images), axis=1)
-    print(classes)
+    model.save_weights("keras_models/weights/deeplfw/%s.h5" % time_str)

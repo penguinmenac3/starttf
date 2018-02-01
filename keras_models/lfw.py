@@ -15,12 +15,12 @@ def prepare_data(img):
     return img
 
 
-def create_triplets(train_images, train_labels, model):
-    triplet_in, triplet_out = train_images, train_labels
-
+def create_triplets(train_data, model):
     print("TODO implement this")  # TODO implement this
 
-    return triplet_in, triplet_out
+    # TODO create own generator in here
+
+    return train_data
 
 
 def deeplfw(weights_path=None):

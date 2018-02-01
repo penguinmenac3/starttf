@@ -1,3 +1,16 @@
+import json
+
+
+def json_file_to_object(filepath):
+    """
+    Read a json file directly to an object.
+    :param filepath: The filepath which to load.
+    :return: The object.
+    """
+    with open(filepath) as file:
+        return Dict2Obj(json.load(file))
+
+
 class Dict2Obj(object):
     """
     Converts a dictionary into an object.

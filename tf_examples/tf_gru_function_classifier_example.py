@@ -12,7 +12,7 @@ GENERATE_DATA = False
 
 def main():
     # Define "constants".
-    hyper_params_filepath = "examples/gru_function_classifier.json"
+    hyper_params_filepath = "tf_examples/gru_function_classifier.json"
     data_tmp_folder = "data/.records/gru_function_classifier"
     training_examples_number = 10000
     validation_examples_number = 1000

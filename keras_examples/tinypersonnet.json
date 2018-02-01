@@ -1,0 +1,14 @@
+{
+    "train": {
+        "optimizer": "RMSProp",
+        "learning_rate": 0.0005,
+        "decay": 1e-6,
+        "momentum": 0.9,
+        "batch_size": 256,
+        "iters": 10000,
+        "summary_iters": 50,
+        "checkpoint_path": "keras_models/weights/tinypersonnet"
+    },
+    "arch": {
+    }
+}

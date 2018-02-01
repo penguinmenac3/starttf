@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow.contrib import layers
 from tensorflow.contrib import rnn
 
-from models.model import Model
+from tf_models.model import Model
 
 
 class FunctionClassifier(Model):

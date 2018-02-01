@@ -2,7 +2,8 @@ import numpy as np
 
 import tensorflow as tf
 
-from models.model import Model
+from tf_models.model import Model
+
 
 class LFWNetwork(Model):
     def __init__(self, hyper_params_filepath):
