@@ -3,8 +3,8 @@ import os
 import tensorflow as tf
 
 from datasets.classification.function_generator import function_generator
-from utils.prepare_training import write_tf_records, read_tf_records, PHASE_TRAIN, PHASE_VALIDATION
-from models.gru_function_classifier import FunctionClassifier
+from datasets.tfrecords import write_tf_records, read_tf_records, PHASE_TRAIN, PHASE_VALIDATION
+from tf_models.gru_function_classifier import FunctionClassifier
 
 
 GENERATE_DATA = False

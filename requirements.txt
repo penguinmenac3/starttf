@@ -5,3 +5,8 @@ scikit-learn
 scipy
 matplotlib
 h5py
+
+# To use keras models
+keras
+pydot-ng
+graphviz

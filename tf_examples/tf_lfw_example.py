@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 from datasets.classification.named_folders import named_folders
-from models.lfw import LFWNetwork
+from tf_models.lfw import LFWNetwork
 
 
 def main():
