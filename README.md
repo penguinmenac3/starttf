@@ -1,6 +1,6 @@
-# Tensorflow - Starterpack [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+# Deep Learning - Starterpack [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-This repo aims to contain everything required to quickly develop a deep neural network with tensorflow.
+This repo aims to contain everything required to quickly develop a deep neural network with tensorflow or keras.
 It comes with several dataset loaders and network architectures.
 If I can find it the models will also contain pretrained weights.
 The idea is that if you use existing dataset loaders and networks and only modify them, you will automatically obey best practices and have super fast training speeds.
@@ -10,7 +10,7 @@ The idea is that if you use existing dataset loaders and networks and only modif
 First clone the repository **recursively**!
 
 ```bash
-git clone --recursive https://github.com/penguinmenac3/tensorflow-starterpack.git
+git clone --recursive https://github.com/penguinmenac3/deeplearning-starterpack.git
 ```
 
 Simply create a new python virtual environment (preferably python 3.x) and install the requirements listed in the [requirements.txt](requirements.txt).
@@ -25,7 +25,7 @@ Or launch your code from the command line like the example bellow.
 ```bash
 # Activate your virtual environment (in my case venv)
 # Then do the following
-(venv) $ cd /PATH/TO/tensorflow-starterpack
+(venv) $ cd /PATH/TO/deeplearning-starterpack
 (venv) $ pyhon -m examples.mnist
 ```
 
@@ -44,12 +44,14 @@ For details checkout the readme of the project [**here**](https://github.com/pen
 
 ## Models
 
-Every [model](models/model.py) supports setup, predict, fit and export methods.
-
 There are some models implemented to tinker around with.
 Most of the implementations are not done by me from scratch but rather refactoring of online found implementations.
 Also the common models will come with pre trained weights I found on the internet.
 Just check the comment at the top of their source files.
+
+### Tensorflow Models
+
+Every [model](tf_models/model.py) supports setup, predict, fit and export methods.
 
 1. Alexnet (single stream version) [TODO]
 2. VGG 16 [TODO]
@@ -65,16 +67,54 @@ More non famous models by myself:
 1. CNN for MNIST (Digit Recognition) [TODO]
 3. CNN for LFW (Person Identification) [TODO]
 
+### Keras Models
+
+1. [Alexnet (single stream version)](models/alexnet.py)
+2. [VGG 16](models/vgg_16.py)
+3. [GoogLeNet (Inception v3)](models/googlenet.py)
+4. Overfeat/Tensorbox [TODO]
+5. ResNet [TODO]
+6. [SegNet](models/segnet.py)
+7. Mask RCNN [TODO]
+8. monoDepth [TODO]
+
+More non famous models by myself:
+
+1. [CNN for MNIST](models/mnist_cnn.py)
+2. [CNN for Person Classification](models/tinypersonnet.py)
+3. [CNN for Person Identification [WIP]](models/deeplfw.py)
+
 ## Examples
 
 Some samples that should help getting into stuff.
 
-Code:
+### Tensorflow Examples
 
 1. MNIST [TODO]
-2. [LFW](examples/lfw_example.py)
+2. [LFW](tf_examples/lfw_example.py)
 3. Imagenet (Baselines) [TODO]
 4. Bounding Box Regression [TODO]
 5. Segmentations [TODO]
 6. Instance Masks [TODO]
 7. Reinforcement Learning [TODO]
+
+### Keras Examples
+
+
+Notebooks:
+1. [MNIST Notebook](examples/mnist.ipynb)
+
+Code:
+
+1. [MNIST](examples/mnist.py)
+2. [LFW](examples/lfw.py)
+3. Imagenet (Baselines) [TODO]
+4. Bounding Box Regression [TODO]
+5. Segmentations [TODO]
+6. Instance Masks [TODO]
+7. Reinforcement Learning [TODO]
+
+On non publically availible data:
+(however can be used on your own data)
+
+1. [Simple Classification (Folder per Class)](examples/tinypersonnet.py)
