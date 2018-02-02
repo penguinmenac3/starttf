@@ -5,6 +5,7 @@ scikit-learn
 scipy
 matplotlib
 h5py
+pandas
 
 # To use keras models
 keras
