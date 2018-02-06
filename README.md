@@ -69,20 +69,20 @@ More non famous models by myself:
 
 ### Keras Models
 
-1. [Alexnet (single stream version)](models/alexnet.py)
-2. [VGG 16](models/vgg_16.py)
-3. [GoogLeNet (Inception v3)](models/googlenet.py)
+1. [Alexnet (single stream version)](keras_models/alexnet.py)
+2. [VGG 16](keras_models/vgg_16.py)
+3. [GoogLeNet (Inception v3)](keras_models/googlenet.py)
 4. Overfeat/Tensorbox [TODO]
 5. ResNet [TODO]
-6. [SegNet](models/segnet.py)
+6. [SegNet](keras_models/segnet.py)
 7. Mask RCNN [TODO]
 8. monoDepth [TODO]
 
 More non famous models by myself:
 
-1. [CNN for MNIST](models/mnist_cnn.py)
-2. [CNN for Person Classification](models/tinypersonnet.py)
-3. [CNN for Person Identification [WIP]](models/deeplfw.py)
+1. [CNN for MNIST](keras_models/mnist_cnn.py)
+2. [CNN for Person Classification](keras_models/tinypersonnet.py)
+3. [CNN for Person Identification [WIP]](keras_models/deeplfw.py)
 
 ## Examples
 
@@ -102,12 +102,12 @@ Some samples that should help getting into stuff.
 
 
 Notebooks:
-1. [MNIST Notebook](examples/mnist.ipynb)
+1. [MNIST Notebook](keras_examples/mnist.ipynb)
 
 Code:
 
-1. [MNIST](examples/mnist.py)
-2. [LFW](examples/lfw.py)
+1. [MNIST](keras_examples/mnist.py)
+2. [LFW](keras_examples/lfw.py)
 3. Imagenet (Baselines) [TODO]
 4. Bounding Box Regression [TODO]
 5. Segmentations [TODO]
@@ -117,4 +117,4 @@ Code:
 On non publically availible data:
 (however can be used on your own data)
 
-1. [Simple Classification (Folder per Class)](examples/tinypersonnet.py)
+1. [Simple Classification (Folder per Class)](keras_examples/tinypersonnet.py)
