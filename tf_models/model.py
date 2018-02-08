@@ -18,7 +18,7 @@ class Model(object):
         """
         self.hyper_params = Dict2Obj(json.load(open(hyper_params_filepath)))
         self.model_train = None
-        self.model_validation = None
+        self.model_deploy = None
         self.sess = None
         self.feed_dict = {}
 
@@ -32,7 +32,7 @@ class Model(object):
         self.sess = session
 
     @abc.abstractmethod
-    def _create_model(self, input_tensor, reuse_weights):
+    def _create_model(self, input_tensor, reuse_weights, is_deploy_model=False):
         """
             Create a model.
         """
@@ -43,7 +43,8 @@ class Model(object):
         """
             Create a loss.
         """
-        return None, None, None
+        train_op, loss_op, validation_loss_op = None, None, None
+        return train_op, loss_op, validation_loss_op
 
     def predict(self, features):
         """
@@ -66,8 +67,8 @@ class Model(object):
         :param summary_iters: summary_iters How many epochs to do between two summaries.
         :param verbose: verbose If you want debug outputs or not.
         """
-        self.model_train      = self._create_model(features, reuse_weights=False)
-        self.model_validation = self._create_model(validation_features, reuse_weights=True)
+        self.model_train = self._create_model(features, reuse_weights=False)
+        self.model_deploy = self._create_model(validation_features, reuse_weights=True, is_deploy_model=True)
 
         # Create loss and training op.
         train_op, loss_op, validation_loss_op = self._create_loss(labels, validation_labels)

@@ -11,7 +11,7 @@ class FunctionClassifier(Model):
     def __init__(self, hyper_params_filepath):
         super(FunctionClassifier, self).__init__(hyper_params_filepath)
 
-    def _create_model(self, input_tensor, reuse_weights, validation=False):
+    def _create_model(self, input_tensor, reuse_weights, is_deploy_model=False):
         outputs = {}
         with tf.variable_scope('NeuralNet') as scope:
             if reuse_weights:
@@ -60,6 +60,6 @@ class FunctionClassifier(Model):
         validation_loss_op = None
         if validation_labels is not None:
             validation_labels = tf.reshape(validation_labels, [-1, self.hyper_params.arch.output_dimension])
-            validation_loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.model_validation["logits_validation"], labels=validation_labels))
+            validation_loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.model_deploy["logits"], labels=validation_labels))
 
         return train_op, loss_op, validation_loss_op
