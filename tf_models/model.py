@@ -21,7 +21,6 @@ class Model(object):
         self.model_validation = None
         self.sess = None
         self.feed_dict = {}
-        self.outputs = {}
 
     def setup(self, session):
         """
@@ -37,14 +36,14 @@ class Model(object):
         """
             Create a model.
         """
-        pass
+        return {}
 
     @abc.abstractmethod
     def _create_loss(self, labels, validation_labels=None):
         """
             Create a loss.
         """
-        pass
+        return None, None, None
 
     def predict(self, features):
         """
