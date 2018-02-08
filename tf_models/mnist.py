@@ -14,7 +14,7 @@ class Mnist(Model):
                 scope.reuse_variables()
 
             # Prepare the inputs
-            x = tf.reshape(tensor=input_tensor, shape=(28, 28, 1), name="input")
+            x = tf.reshape(tensor=input_tensor, shape=(-1, 28, 28, 1), name="input")
 
             # First Conv Block
             conv1 = tf.layers.conv2d(inputs=x, filters=16, kernel_size=(3, 3), strides=(1, 1), name="conv1",
@@ -30,7 +30,7 @@ class Mnist(Model):
                                      kernel_regularizer=tf.keras.regularizers.l2(l2_weight), activation=tf.nn.relu)
             pool4 = tf.layers.max_pooling2d(inputs=conv4, pool_size=(2, 2), strides=(2, 2), name="pool4")
             if not is_deploy_model:
-                pool4 = tf.layers.dropout(inputs=pool4, rate=0.5, name="drop4")
+                pool4 = tf.layers.dropout(inputs=pool4, rate=self.hyper_params.arch.dropout_rate, name="drop4")
 
             # Fully Connected Block
             probs = tf.layers.flatten(inputs=pool4)
@@ -45,14 +45,14 @@ class Mnist(Model):
         return outputs
 
     def _create_loss(self, labels, validation_labels=None):
-        labels = tf.reshape(labels, [-1, self.hyper_params.arch.output_dimension])
+        labels = tf.reshape(labels, [-1, 10])
         loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.model_train["logits"], labels=labels))
         train_op = tf.train.RMSPropOptimizer(learning_rate=self.hyper_params.train.learning_rate, decay=self.hyper_params.train.decay).minimize(loss_op)
 
         # Create a validation loss if possible.
         validation_loss_op = None
         if validation_labels is not None:
-            validation_labels = tf.reshape(validation_labels, [-1, self.hyper_params.arch.output_dimension])
+            validation_labels = tf.reshape(validation_labels, [-1, 10])
             validation_loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.model_deploy["logits"], labels=validation_labels))
 
         return train_op, loss_op, validation_loss_op
