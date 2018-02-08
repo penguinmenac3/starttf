@@ -125,7 +125,7 @@ def segnet(weights_path=None):
     for l in model.decoding_layers:
         model.add(l)
 
-        model.add(Reshape((n_labels, img_h * img_w)))
+    model.add(Reshape((n_labels, img_h * img_w)))
     model.add(Permute((2, 1)))
     model.add(Activation('softmax'))
 
