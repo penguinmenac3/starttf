@@ -94,10 +94,12 @@ class Model(object):
             if i_step % self.hyper_params.train.summary_iters == 0:
                 loss_val = 0.0
                 if validation_examples_num > 0:
+                    n_iters = 0
                     for i_val in range(int(validation_examples_num / self.hyper_params.train.batch_size)):
                         loss_val_loc = self.sess.run([validation_loss_op], feed_dict=self.feed_dict)[0]
                         loss_val += loss_val_loc / float(self.hyper_params.train.batch_size)
-                    loss_val /= float(validation_examples_num)
+                        n_iters += 1
+                    loss_val /= float(n_iters)
 
                 if verbose:
                     print("Iter: %d, Loss: %.4f, Validation Loss: %.4f" % (i_step, acc_loss / float(self.hyper_params.train.batch_size) / float(self.hyper_params.train.summary_iters), loss_val))
