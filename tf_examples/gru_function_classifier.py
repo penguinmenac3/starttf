@@ -10,6 +10,14 @@ from tf_models.gru_function_classifier import FunctionClassifier
 GENERATE_DATA = False
 
 
+def sin_fn(x, off):
+    return math.sin(x / 50.0 + off)
+
+
+def lin_fn(x, off):
+    return x / 50.0 + off
+
+
 def main():
     # Define "constants".
     hyper_params_filepath = "tf_examples/gru_function_classifier.json"
@@ -22,8 +30,8 @@ def main():
             os.makedirs(data_tmp_folder)
         # Create training data.
         print("Generating data")
-        train_data = function_generator([lambda x, off: math.sin(x / 50.0 + off), lambda x, off: x / 50.0 + off], 100, training_examples_number)
-        validation_data = function_generator([lambda x, off: math.sin(x / 50.0 + off), lambda x, off: x / 50.0 + off], 100, validation_examples_number)
+        train_data = function_generator([sin_fn, lin_fn], 100, training_examples_number)
+        validation_data = function_generator([sin_fn, lin_fn], 100, validation_examples_number)
 
         # Write tf records
         print("Writing data")
