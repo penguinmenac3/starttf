@@ -5,7 +5,7 @@
         "batch_size": 200,
         "iters": 50000,
         "summary_iters": 50,
-        "checkpoint_path": "tf_models/checkpoints/gru_function_classifier/chkpt"
+        "checkpoint_path": "tf_models/checkpoints/gru_function_classifier"
     },
     "arch": {
         "sequence_length": 100,

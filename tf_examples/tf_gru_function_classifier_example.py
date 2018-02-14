@@ -48,7 +48,7 @@ def main():
         model.setup(sess)
 
         print("Training")
-        model.fit(train_features, train_labels, validation_examples_number, validation_features, validation_labels, verbose=True)
+        model.fit(train_features, train_labels, validation_features, validation_labels)
     
         print("Exporting")
         model.export()

@@ -36,7 +36,8 @@ def main():
     print("Loading data")
     train_features, train_labels = read_tf_records(data_tmp_folder, PHASE_TRAIN, model.hyper_params.train.batch_size)
     validation_features, validation_labels = read_tf_records(data_tmp_folder, PHASE_VALIDATION,
-                                                             model.hyper_params.train.batch_size)
+                                                             validation_examples_number)
+    #                                                         model.hyper_params.train.batch_size)
 
     # Limit used gpu memory.
     config = tf.ConfigProto()
@@ -48,8 +49,7 @@ def main():
         model.setup(sess)
 
         print("Training")
-        model.fit(train_features, train_labels, validation_examples_number, validation_features, validation_labels,
-                  verbose=True)
+        model.fit(train_features, train_labels, validation_features, validation_labels)
 
         print("Exporting")
         model.export()

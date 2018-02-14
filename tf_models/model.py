@@ -1,4 +1,6 @@
 import json
+import time
+import datetime
 import abc
 
 from utils.dict2obj import Dict2Obj
@@ -17,6 +19,7 @@ class Model(object):
         :param hyper_params_filepath: The path to the hyper parameters file
         """
         self.hyper_params = Dict2Obj(json.load(open(hyper_params_filepath)))
+        self.hyper_params_filepath = hyper_params_filepath
         self.model_train = None
         self.model_deploy = None
         self.sess = None
@@ -55,7 +58,7 @@ class Model(object):
         """
         pass
 
-    def fit(self, features, labels, validation_examples_num=0, validation_features=None, validation_labels=None, verbose=True):
+    def fit(self, features, labels, validation_features=None, validation_labels=None):
         """
         Fit the model to given training data.
 
@@ -65,8 +68,10 @@ class Model(object):
         :param validation_labels: validation_labels An input queue tensor. (This data is optional, if not provided no validation is done.)
         :param iters: iters The number of epochs to train in total.
         :param summary_iters: summary_iters How many epochs to do between two summaries.
-        :param verbose: verbose If you want debug outputs or not.
         """
+        time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
+
+        # Create Model
         self.model_train = self._create_model(features, reuse_weights=False)
         self.model_deploy = self._create_model(validation_features, reuse_weights=True, is_deploy_model=True)
 
@@ -82,31 +87,29 @@ class Model(object):
         threads = tf.train.start_queue_runners(coord=coord, sess=self.sess)
         saver = tf.train.Saver()
 
+        # Merge all the summaries and write them out
+        merged = tf.summary.merge_all()
+        log_writer = tf.summary.FileWriter(self.hyper_params.train.checkpoint_path + "/" + time_stamp, self.sess.graph)
+        tf.global_variables_initializer().run()
+
+        # Write hyperparameters to be able to track what config you had.
+        with open(self.hyper_params.train.checkpoint_path + "/" + time_stamp + "/hyperparameters.json", "w") as json_file:
+            with open(self.hyper_params_filepath, "r") as f:
+                json_file.write(f.read())
+
         # Train
-        acc_loss = 0.0
-        loss_normalizer = float(self.hyper_params.train.batch_size) / float(self.hyper_params.train.summary_iters)
+        print("Training Model: To reduce overhead no outputs are done. Use tensorboard to see your progress.")
+        print("python -m tensorboard.main --logdir=tf_models/checkpoints")
         for i_step in range(self.hyper_params.train.iters):
-
             # Train step.
-            _, loss = self.sess.run([train_op, loss_op], feed_dict=self.feed_dict)
-            acc_loss += loss
+            if i_step % self.hyper_params.train.summary_iters != 0:
+                self.sess.run([train_op], feed_dict=self.feed_dict)
+            else:  # Do validation and summary.
+                _, summary = self.sess.run([train_op, merged], feed_dict=self.feed_dict)
+                log_writer.add_summary(summary, i_step)
+                saver.save(self.sess, self.hyper_params.train.checkpoint_path + "/" + time_stamp + "/chkpt", global_step=i_step)
 
-            # Do validation and summary.
-            if i_step % self.hyper_params.train.summary_iters == 0:
-                loss_val = 0.0
-                if validation_examples_num > 0:
-                    for i_val in range(int(validation_examples_num / self.hyper_params.train.batch_size)):
-                        loss_val_loc = self.sess.run([validation_loss_op], feed_dict=self.feed_dict)[0]
-                        loss_val += loss_val_loc
-
-                if verbose:
-                    print("Iter: %d, Loss: %.4f, Validation Loss: %.4f" % (i_step, acc_loss / loss_normalizer, loss_val / loss_normalizer))
-                    acc_loss = 0.0
-
-                saver.save(self.sess, self.hyper_params.train.checkpoint_path, global_step=i_step)
-
-        if verbose:
-            print("Training stopped.")
+        print("Training stopped.")
 
         coord.request_stop()
         coord.join(threads)
