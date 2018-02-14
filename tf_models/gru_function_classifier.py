@@ -50,7 +50,6 @@ class FunctionClassifier(Model):
             outputs["logits"] = layers.linear(last, self.hyper_params.arch.output_dimension)     # [ BATCHSIZE x SEQLEN, self.hyper_params.arch.output_dim ]
         return outputs
 
-
     def _create_loss(self, labels, validation_labels=None):
         labels = tf.reshape(labels, [-1, self.hyper_params.arch.output_dimension])
         loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.model_train["logits"], labels=labels))
@@ -58,10 +57,9 @@ class FunctionClassifier(Model):
         tf.summary.scalar('train/loss', loss_op)
 
         # Create a validation loss if possible.
-        validation_loss_op = None
         if validation_labels is not None:
             validation_labels = tf.reshape(validation_labels, [-1, self.hyper_params.arch.output_dimension])
             validation_loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.model_deploy["logits"], labels=validation_labels))
             tf.summary.scalar('dev/loss', validation_loss_op)
 
-        return train_op, loss_op, validation_loss_op
+        return train_op

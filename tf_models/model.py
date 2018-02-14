@@ -46,8 +46,7 @@ class Model(object):
         """
             Create a loss.
         """
-        train_op, loss_op, validation_loss_op = None, None, None
-        return train_op, loss_op, validation_loss_op
+        return None
 
     def predict(self, features):
         """
@@ -76,7 +75,7 @@ class Model(object):
         self.model_deploy = self._create_model(validation_features, reuse_weights=True, is_deploy_model=True)
 
         # Create loss and training op.
-        train_op, loss_op, validation_loss_op = self._create_loss(labels, validation_labels)
+        train_op = self._create_loss(labels, validation_labels)
 
         # Init vars.
         init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
