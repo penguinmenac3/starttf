@@ -3,7 +3,7 @@ from datasets.classification.named_folders import named_folders
 from keras.optimizers import SGD, RMSprop
 from keras.utils import plot_model
 import os
-from utils.plot_losses import PlotLosses
+from utils.plot_losses import KerasPlotLosses
 import time
 import datetime
 import numpy as np
@@ -57,11 +57,11 @@ if __name__ == "__main__":
     model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=["accuracy"])
 
     print("\nFit model...")
-    plot_losses = PlotLosses(model_output_folder + "/loss.png",
-                             model_output_folder + "/acc.png",
-                             model_output_folder + "/f1.png",
-                             model_output_folder + "/roc.png",
-                             validation_data=batch_generator(validation_data), f1_score_class=class_map["p"])
+    plot_losses = KerasPlotLosses(model_output_folder + "/loss.png",
+                                  model_output_folder + "/acc.png",
+                                  model_output_folder + "/f1.png",
+                                  model_output_folder + "/roc.png",
+                                  validation_data=batch_generator(validation_data), f1_score_class=class_map["p"])
     model.fit_generator(batch_generator(train_data, batch_size=hyper_parameters.train.batch_size),
                         steps_per_epoch=hyper_parameters.train.summary_iters,
                         nb_epoch=int(hyper_parameters.train.iters / hyper_parameters.train.summary_iters),

@@ -1,11 +1,10 @@
 import time
 import datetime
 import tensorflow as tf
-from tensorflow.python.tools.freeze_graph import freeze_graph
 import json
 
 
-def train(hyper_params, session, train_op, feed_dict):
+def train(hyper_params, session, train_op, feed_dict, reports=[], callback=None):
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
 
     # Init vars.
@@ -32,13 +31,17 @@ def train(hyper_params, session, train_op, feed_dict):
     for i_step in range(hyper_params.train.iters):
         # Train step.
         if i_step % hyper_params.train.summary_iters != 0:
-            session.run([train_op], feed_dict=feed_dict)
+            _ = session.run([train_op], feed_dict=feed_dict)
         else:  # Do validation and summary.
-            _, summary = session.run([train_op, merged], feed_dict=feed_dict)
+            results = session.run(reports + [train_op, merged], feed_dict=feed_dict)
+            if callback is not None:
+                callback(i_step, results[:-2], hyper_params.train.checkpoint_path + "/" + time_stamp)
+            else:
+                print("Iter: %d" % i_step)
+            summary = results[-1]
             log_writer.add_summary(summary, i_step)
             saver.save(session, hyper_params.train.checkpoint_path + "/" + time_stamp + "/chkpt",
                        global_step=i_step)
-            print("Iter: %d" % i_step)
 
     saver.save(session, hyper_params.train.checkpoint_path + "/" + time_stamp + "/final_chkpt")
     coord.request_stop()

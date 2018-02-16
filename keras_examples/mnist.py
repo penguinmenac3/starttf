@@ -2,7 +2,7 @@ from keras_models.mnist_cnn import mnist_toy_net, prepare_data
 from datasets.classification.mnist import mnist
 from keras.optimizers import SGD
 from keras.utils import plot_model
-from utils.plot_losses import PlotLosses
+from utils.plot_losses import KerasPlotLosses
 from utils.dict2obj import json_file_to_object
 import time
 import datetime
@@ -39,9 +39,9 @@ if __name__ == "__main__":
     model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=["accuracy"])
 
     print("\nFit model...")
-    plot_losses = PlotLosses(model_output_folder + "/loss.png",
-                             model_output_folder + "/acc.png",
-                             validation_data=batch_generator(validation_data))
+    plot_losses = KerasPlotLosses(model_output_folder + "/loss.png",
+                                  model_output_folder + "/acc.png",
+                                  validation_data=batch_generator(validation_data))
     model.fit_generator(batch_generator(train_data, batch_size=hyper_parameters.train.batch_size),
                         steps_per_epoch=hyper_parameters.train.summary_iters,
                         nb_epoch=int(hyper_parameters.train.iters / hyper_parameters.train.summary_iters),

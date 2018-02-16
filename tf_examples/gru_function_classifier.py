@@ -3,6 +3,7 @@ import tensorflow as tf
 import numpy as np
 
 from utils.hyperparams import load_params
+from utils.plot_losses import create_plot
 
 from datasets.classification.function_generator import function_generator
 from utils.generic_data_loader import load_data
@@ -65,15 +66,30 @@ def main():
     train_model, feed_dict = create_model(hyper_params, train_features)
     validation_model, feed_dict = create_model(hyper_params, validation_features, reuse_weights=True, deploy_model=True,
                                                feed_dict=feed_dict)
-    train_op = create_loss(hyper_params, train_model, validation_model, train_labels, validation_labels)
+    train_op, reports = create_loss(hyper_params, train_model, validation_model, train_labels, validation_labels)
 
     # Limit used gpu memory.
     config = tf.ConfigProto()
     config.gpu_options.per_process_gpu_memory_fraction = 0.75
+    # Collector variables for loss images.
+    iter_list = []
+    losses = []
+    val_losses = []
+
+    # Callback gets called every validation iter.
+    def callback(i_step, reports, model_path):
+        # Interpret report matching to the report defined in reports by create_model
+        print("Iter: %d, Train loss: %.4f, Test loss: %.4f" % (i_step, reports[0], reports[1]))
+
+        # Also plot the loss in a png (e.g. for papers)
+        iter_list.append(i_step)
+        losses.append(reports[0])
+        val_losses.append(reports[1])
+        create_plot(model_path, iter_list, losses, val_losses, "Train Loss", "Validation Loss", "Losses")
 
     # Train model.
     with tf.Session(config=config) as session:
-        checkpoint_path = train(hyper_params, session, train_op, feed_dict)
+        checkpoint_path = train(hyper_params, session, train_op, feed_dict, reports=reports, callback=callback)
 
     # Export the trained model
     export_graph(checkpoint_path=checkpoint_path, output_nodes=["GruFunctionClassifier_1/probs"])

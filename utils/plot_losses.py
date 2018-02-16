@@ -1,6 +1,21 @@
 import keras
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+
+
+def create_plot(model_path, x, y1, y2, y1_label, y2_label, title):
+    if not os.path.exists(model_path + "/images"):
+        os.makedirs(model_path + "/images")
+
+    plt.title(title)
+    plt.xlabel("iter")
+    plt.ylabel(title)
+    plt.plot(x, y1, label=y1_label)
+    plt.plot(x, y2, label=y2_label)
+    plt.legend()
+    plt.savefig(model_path + "/images/" + title + ".png")
+    plt.clf()
 
 
 def f1_score(true, pred, f1_score_class, tresh=0.5):
@@ -35,7 +50,7 @@ def f1_score(true, pred, f1_score_class, tresh=0.5):
     return 2 * precision * recall / (precision + recall), tpr, fpr
 
 
-class PlotLosses(keras.callbacks.Callback):
+class KerasPlotLosses(keras.callbacks.Callback):
     def __init__(self, loss_image_path, accuracy_image_path, f1_image_path=None, precision_recall_image_path=None, validation_data=None, f1_score_class=0):
         super().__init__()
         assert validation_data is not None

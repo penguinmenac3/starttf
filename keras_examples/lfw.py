@@ -2,7 +2,7 @@ from keras_models.lfw import deeplfw, prepare_data, create_triplets
 from datasets.classification.named_folders import named_folders
 from keras.optimizers import SGD
 from keras.utils import plot_model
-from utils.plot_losses import PlotLosses
+from utils.plot_losses import KerasPlotLosses
 import time
 import datetime
 import numpy as np
@@ -38,9 +38,9 @@ if __name__ == "__main__":
     model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=["accuracy"])
 
     print("\nFit model...")
-    plot_losses = PlotLosses("keras_models/weights/deeplfw/loss_%s.png" % time_str,
+    plot_losses = KerasPlotLosses("keras_models/weights/deeplfw/loss_%s.png" % time_str,
                              "keras_models/weights/deeplfw/acc_%s.png" % time_str,
-                             validation_data=batch_generator(validation_data))
+                                  validation_data=batch_generator(validation_data))
 
     model.fit_generator(batch_generator(create_triplets(train_data, model), batch_size=256), steps_per_epoch=20, nb_epoch=200, callbacks=[plot_losses], verbose=0)
 
