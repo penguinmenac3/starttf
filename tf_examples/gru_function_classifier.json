@@ -3,7 +3,7 @@
         "learning_rate": 0.0001,
         "decay": 0.9,
         "batch_size": 200,
-        "iters": 50000,
+        "iters": 600,
         "summary_iters": 50,
         "checkpoint_path": "tf_models/checkpoints/gru_function_classifier"
     },

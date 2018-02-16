@@ -1,11 +1,14 @@
 import math
-import os
 import tensorflow as tf
+import numpy as np
+
+from utils.hyperparams import load_params
 
 from datasets.classification.function_generator import function_generator
-from datasets.tfrecords import write_tf_records, read_tf_records, PHASE_TRAIN, PHASE_VALIDATION
-from tf_models.gru_function_classifier import FunctionClassifier
+from utils.generic_data_loader import load_data
 
+from tf_models.gru_function_classifier import create_model, create_loss
+from tf_models.model import train, export_graph, load_graph
 
 GENERATE_DATA = False
 
@@ -18,48 +21,66 @@ def lin_fn(x, off):
     return x / 50.0 + off
 
 
-def main():
-    # Define "constants".
-    hyper_params_filepath = "tf_examples/gru_function_classifier.json"
-    data_tmp_folder = "data/.records/gru_function_classifier"
+def generate_data_fn():
     training_examples_number = 10000
     validation_examples_number = 1000
 
-    if GENERATE_DATA or not os.path.exists(data_tmp_folder):
-        if not os.path.exists(data_tmp_folder):
-            os.makedirs(data_tmp_folder)
-        # Create training data.
-        print("Generating data")
-        train_data = function_generator([sin_fn, lin_fn], 100, training_examples_number)
-        validation_data = function_generator([sin_fn, lin_fn], 100, validation_examples_number)
+    train_data = function_generator([sin_fn, lin_fn], 100, training_examples_number)
+    validation_data = function_generator([sin_fn, lin_fn], 100, validation_examples_number)
+    return train_data, validation_data
 
-        # Write tf records
-        print("Writing data")
-        write_tf_records(data_tmp_folder, 4, 2, train_data, validation_data)
+
+def import_graph(checkpoint_path):
+    hyper_params = load_params("tf_examples/gru_function_classifier.json")
+
+    # Load Graph
+    graph = load_graph(checkpoint_path + "/frozen_model.pb", (1, 100, 1), old_input="GruFunctionClassifier_1/Reshape:0")
+
+    # Find relevant tensors
+    input_tensor = graph.get_tensor_by_name('input_tensor:0')
+    Hin = graph.get_tensor_by_name('GruFunctionClassifier_1/Hin:0')
+    probs = graph.get_tensor_by_name('GruFunctionClassifier_1/probs:0')
+
+    # Create/define inputs
+    x = np.array([[[sin_fn(i, 0)] for i in range(100)]], dtype=np.float32)
+    np_Hin = np.zeros([1, hyper_params.arch.hidden_layer_size * hyper_params.arch.hidden_layer_depth])
+
+    with tf.Session(graph=graph) as sess:
+        y_out = sess.run(probs, feed_dict={Hin: np_Hin, input_tensor: x})
+        print(y_out)
+
+
+def main():
+    # Define "constants".
+    hyper_params = load_params("tf_examples/gru_function_classifier.json")
+
+    # Load training data
+    print("Loading data")
+    data_tmp_folder = "data/.records/gru_function_classifier"
+    train_features, train_labels, validation_features, validation_labels = load_data(hyper_params, generate_data_fn,
+                                                                                     data_tmp_folder)
 
     # Create model.
     print("Creating Model")
-    model = FunctionClassifier(hyper_params_filepath)
-
-    # Load data with tf records.
-    print("Loading data")
-    train_features, train_labels = read_tf_records(data_tmp_folder, PHASE_TRAIN, model.hyper_params.train.batch_size)
-    validation_features, validation_labels = read_tf_records(data_tmp_folder, PHASE_VALIDATION, model.hyper_params.train.batch_size)
+    train_model, feed_dict = create_model(hyper_params, train_features)
+    validation_model, feed_dict = create_model(hyper_params, validation_features, reuse_weights=True, deploy_model=True,
+                                               feed_dict=feed_dict)
+    train_op = create_loss(hyper_params, train_model, validation_model, train_labels, validation_labels)
 
     # Limit used gpu memory.
     config = tf.ConfigProto()
     config.gpu_options.per_process_gpu_memory_fraction = 0.75
 
-    # train model.
-    with tf.Session(config=config) as sess:
-        print("Setup")
-        model.setup(sess)
+    # Train model.
+    with tf.Session(config=config) as session:
+        checkpoint_path = train(hyper_params, session, train_op, feed_dict)
 
-        print("Training")
-        model.fit(train_features, train_labels, validation_features, validation_labels)
-    
-        print("Exporting")
-        model.export()
+    # Export the trained model
+    export_graph(checkpoint_path=checkpoint_path, output_nodes=["GruFunctionClassifier_1/probs"])
+    print("Exported to: %s" % checkpoint_path)
+
+    # To check if import works.
+    #import_graph(checkpoint_path)
 
 
 if __name__ == "__main__":

@@ -26,3 +26,7 @@ class Dict2Obj(object):
                 setattr(self, a, [Dict2Obj(x) if isinstance(x, dict) else x for x in b])
             else:
                 setattr(self, a, Dict2Obj(b) if isinstance(b, dict) else b)
+
+    def to_dict(self):
+        return dict((key, value.to_dict()) if isinstance(value, Dict2Obj) else (key, value)
+                    for (key, value) in self.__dict__.items())
