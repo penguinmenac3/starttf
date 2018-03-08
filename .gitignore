@@ -2,6 +2,7 @@
 .vscode
 data
 tf_models/checkpoints/*
+tf_models/weights/*
 keras_models/weights/*
 
 nonpublic/*
