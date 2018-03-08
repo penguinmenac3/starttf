@@ -4,15 +4,42 @@ import numpy as np
 import os
 
 
-def create_plot(model_path, x, y1, y2, y1_label, y2_label, title):
+class DefaultLossCalback(object):
+    def __init__(self, render_map):
+        self.iter_list = []
+        self.report_storage = []
+        self.render_map = render_map
+
+    def callback(self, i_step, reports, model_path):
+        # Interpret report matching to the report defined in reports by create_model
+        print("Iter: %d, Train loss: %.4f, Test loss: %.4f" % (i_step, reports[0], reports[1]))
+        self.iter_list.append(i_step)
+        for i in range(len(reports)):
+            if len(self.report_storage) <= i:
+                self.report_storage.append([])
+            self.report_storage[i].append(reports[i])
+
+        # A map defining how to render the reports.
+        for render in self.render_map:
+            title, data = render
+            plot_data = []
+            for date in data:
+                label, report_id = date
+                plot_data.append((label, self.iter_list, self.report_storage[report_id]))
+
+            create_plot(title, model_path, plot_data)
+
+
+def create_plot(title, model_path, data):
     if not os.path.exists(model_path + "/images"):
         os.makedirs(model_path + "/images")
 
     plt.title(title)
     plt.xlabel("iter")
     plt.ylabel(title)
-    plt.plot(x, y1, label=y1_label)
-    plt.plot(x, y2, label=y2_label)
+    for date in data:
+        label, x, y = date
+        plt.plot(x, y, label=label)
     plt.legend()
     plt.savefig(model_path + "/images/" + title + ".png")
     plt.clf()
