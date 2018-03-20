@@ -2,7 +2,7 @@
 # Copyright (c) 2016 Saumitro Dasgupta
 # Licensed under MIT License.
 #
-# Modified by Michael Fürst 2018
+# Modified by Michael Fuerst 2018
 
 import numpy as np
 import tensorflow as tf
@@ -289,22 +289,22 @@ class Network(object):
         t_w = w * k_x
         t_c = c / (k_x * k_y)
 
+        input = tf.transpose(input, [1, 2, 3, 0])
         # Define the indices for gathering
         indices = []
         # Order in Tensor: batch, h, w, chan
-        for batch in range(batch_size):
+        for y in range(t_h):
             indices.append([])
-            for y in range(t_h):
-                indices[batch].append([])
-                for x in range(t_w):
-                    indices[batch][y].append([])
-                    for chan in range(t_c):
-                        orig_chan = chan * (k_x * k_y) + x % k_x + k_x * (y % k_y)
-                        orig_x = int(x / k_x)
-                        orig_y = int(y / k_y)
-                        indices[batch][y][x].append([batch, orig_y, orig_x, orig_chan])
+            for x in range(t_w):
+                indices[y].append([])
+                for chan in range(t_c):
+                    orig_chan = chan * (k_x * k_y) + x % k_x + k_x * (y % k_y)
+                    orig_x = int(x / k_x)
+                    orig_y = int(y / k_y)
+                    indices[y][x].append([orig_y, orig_x, orig_chan])
 
-        return tf.gather_nd(input, tf.constant(indices), name=name)
+        result = tf.gather_nd(input, tf.constant(indices), name=name)
+        return tf.transpose(result, [3, 0, 1, 2])
 
     @multi_output_layer
     def split(self, input, split_points, axis, output_names, name):
