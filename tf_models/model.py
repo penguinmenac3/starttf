@@ -4,7 +4,7 @@ import tensorflow as tf
 import json
 
 
-def train(hyper_params, session, train_op, feed_dict, reports=[], callback=None):
+def train(hyper_params, session, train_op, feed_dict, reports=[], callback=None, enable_timing=False):
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
 
     # Init vars.
@@ -28,6 +28,8 @@ def train(hyper_params, session, train_op, feed_dict, reports=[], callback=None)
     # Train
     print("Training Model: To reduce overhead no outputs are done. Use tensorboard to see your progress.")
     print("python -m tensorboard.main --logdir=tf_models/checkpoints")
+    last_printout = time.time()
+    last_printout_iter = -1
     for i_step in range(hyper_params.train.iters):
         # Train step.
         if i_step % hyper_params.train.summary_iters != 0:
@@ -42,6 +44,11 @@ def train(hyper_params, session, train_op, feed_dict, reports=[], callback=None)
             log_writer.add_summary(summary, i_step)
             saver.save(session, hyper_params.train.checkpoint_path + "/" + time_stamp + "/chkpt",
                        global_step=i_step)
+            if enable_timing:
+                end = time.time()
+                print("Timing: %.3f ms per iteration" % ((end - last_printout) * 1000 / float(i_step - last_printout_iter)))
+                last_printout = end
+                last_printout_iter = i_step
 
     saver.save(session, hyper_params.train.checkpoint_path + "/" + time_stamp + "/final_chkpt")
     coord.request_stop()
