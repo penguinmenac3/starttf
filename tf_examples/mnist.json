@@ -4,6 +4,8 @@
         "decay": 1e-6,
         "momentum": 0.9,
         "batch_size": 1024,
+        "#validation_batch_size": 10000,
+        "validation_batch_size": 1024,
         "iters": 11000,
         "summary_iters": 55,
         "checkpoint_path": "tf_models/checkpoints/mnist"

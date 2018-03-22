@@ -30,8 +30,7 @@ def main():
     # Load training data
     print("Loading data")
     data_tmp_folder = "data/.records/mnist"
-    validation_examples_number = 10000
-    train_features, train_labels, validation_features, validation_labels = load_data(hyper_params, generate_data_fn, data_tmp_folder, validation_examples_number=validation_examples_number)
+    train_features, train_labels, validation_features, validation_labels = load_data(hyper_params, generate_data_fn, data_tmp_folder)
 
     # Create model.
     print("Creating Model")
@@ -44,7 +43,7 @@ def main():
 
     # Train model.
     with tf.Session(config=get_default_config()) as session:
-        checkpoint_path = train(hyper_params, session, train_op, feed_dict, reports=reports, callback=callback_obj.callback)
+        checkpoint_path = train(hyper_params, session, train_op, feed_dict, reports=reports, callback=callback_obj.callback, enable_timing=True)
 
     # Export the trained model
     export_graph(checkpoint_path=checkpoint_path, output_nodes=["MnistNetwork_1/probs"])
