@@ -5,6 +5,11 @@ It comes with several dataset loaders and network architectures.
 If I can find it the models will also contain pretrained weights.
 The idea is that if you use existing dataset loaders and networks and only modify them, you will automatically obey best practices and have super fast training speeds.
 
+## Writing your own models
+
+See section 'Simple to use tensorflow' at the end of this document.
+
+
 ## Install
 
 First clone the repository **recursively**!
@@ -53,8 +58,8 @@ Just check the comment at the top of their source files.
 
 Every [model](tf_models/model.py) supports setup, predict, fit and export methods.
 
-1. Alexnet (single stream version) [TODO]
-2. VGG 16 [TODO]
+1. [Alexnet (single stream version)](tf_models/alexnet.py)
+2. [VGG 16](tf_models/vgg16.py)
 3. GoogLeNet (Inception v3) [TODO]
 4. Overfeat/Tensorbox [TODO]
 5. ResNet [TODO]
@@ -125,63 +130,62 @@ On non publically availible data:
 ## Simple to use tensorflow
 
 
-### Predefined Models
+### Predefined Models and losses
 
-There are pre-implemented models. Simply import them and link them to your session.
+There are pre-implemented models.
+Which can be easily glued together in a model function.
+`mode` is a `tf.estimator.ModeKeys` to be Estimator compatible.
 
 ```python
-from tf_models.mnist import Mnist
-# Create Model
-model = Mnist(hyper_params_filepath)
+from tf_models.mnist import create_loss, create_model
 
-# Create a session and link it to your model.
-with tf.Session(config=config) as sess:
-    model.setup(sess)
+def my_model_fn(features, labels, mode, hyper_params):
+    model = create_model(features, mode, hyper_params)
+    losses = create_loss(model, labels, mode, hyper_params)
+    train_op = None
+
+    if mode == tf.estimator.ModeKeys.TRAIN:
+        train_op = tf.train.RMSPropOptimizer(learning_rate=hyper_params.train.learning_rate,
+                                     decay=hyper_params.train.decay).minimize(train_losses[0])
+    
+    return model, losses, train_op
 ```
 
 ### Quick Model Definition
 
-Simply implement the _create_model method in a derived class from Model to define your very own model.
-Just use a variable scope and reuse weights if requested from outside and return outputs.
+Simply implement a create_model function.
+This model is only a feed forward model.
+
+The model function returns a dictionary containing all layers that should be accessible from outside and a feed_dict prepopulated with e.g. hidden states for rnns.
 
 ```python
-from tf_models.model import Model
-class YourModel(Model):
-    # [...]
+def create_model(input_tensor, mode, hyper_params):
+    model = {}
+    l2_weight = 0.0
+    with tf.variable_scope('MnistNetwork') as scope:
+        if mode == tf.estimator.ModeKeys.EVAL:
+            scope.reuse_variables()
 
-    def _create_model(self, input_tensor, reuse_weights, is_deploy_model=False):
-        outputs = {}
-        with tf.variable_scope('MnistNetwork') as scope:
-            if reuse_weights:
-                scope.reuse_variables()
-
-            # TODO put your network here
-
-            outputs["logits"] = logits
-            outputs["probs"] = probs
-        return outputs
+        # TODO Your model should go here
+        model["logits"] = input_tensor
+        model["probs"] = tf.nn.softmax(logits=model["logits"], name="probs")
+    return model
 ```
 
-Now you can define your loss for training. In the case of this is super simple.
-The output returned from the _create_model method are now available as class variables in self.model_train and self.model_deploy for you.
-
-The train model is meant to be used for training (optimizing weights) whereas the deploy model should be used for evaluation/validation of your model.
+### Quick Loss Definition
 
 ```python
-    def _create_loss(self, labels, validation_labels=None):
-        labels = tf.reshape(labels, [-1, 10])
-        loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.model_train["logits"], labels=labels))
-        train_op = tf.train.RMSPropOptimizer(learning_rate=self.hyper_params.train.learning_rate, decay=self.hyper_params.train.decay).minimize(loss_op)
-        tf.summary.scalar('train/loss', loss_op)
+def create_loss(model, labels, mode, hyper_params):
+    mode_name = utils.mode_to_str(mode)
 
-        # Create a validation loss if possible.
-        validation_loss_op = None
-        if validation_labels is not None:
-            validation_labels = tf.reshape(validation_labels, [-1, 10])
-            validation_loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.model_deploy["logits"], labels=validation_labels))
-            tf.summary.scalar('dev/loss', validation_loss_op)
+    losses = []
+    
+    # Add a loss (also to tensorboard)
+    loss_op = ...
+    losses.append(loss_op)
+    tf.summary.scalar(mode_name + '/loss', loss_op)
 
-        return train_op, loss_op, validation_loss_op
+    return losses
 ```
 
 ### TFRecord Integration
@@ -190,25 +194,13 @@ Fast training speed can be achieved by using tf records.
 Actually the api only supports using tf records, to enforce usage for optimal performance.
 
 ```python
-# Imports
-from datasets.classification.mnist import mnist
-from datasets.tfrecords import write_tf_records, read_tf_records, PHASE_TRAIN, PHASE_VALIDATION
-
-if data_needs_generation:
-    # Load the dataset you want as a generator.
+def generate_data_fn():
+    base_dir = "data/mnist"
     train_data = mnist(base_dir=base_dir, phase=PHASE_TRAIN)
     validation_data = mnist(base_dir=base_dir, phase=PHASE_VALIDATION)
+    return train_data, validation_data
 
-    # Write a record with 4 threads for training and 2 threads for validation.
-    write_tf_records(data_tmp_folder, 4, 2, train_data, validation_data)
-
-# Create your model to know hyperparameters for reader.
-model = ...
-
-# Load data with tf records.
-train_features, train_labels = read_tf_records(data_tmp_folder, PHASE_TRAIN, model.hyper_params.train.batch_size)
-
-model.fit(train_features, train_labels)  # optional: also pass in validation features and labels
+train_features, train_labels, validation_features, validation_labels = load_data(hyper_params, generate_data_fn, data_tmp_folder)
 ```
 
 ### Tensorboard Integration
