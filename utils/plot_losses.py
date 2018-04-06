@@ -4,13 +4,12 @@ import numpy as np
 import os
 
 
-class DefaultLossCalback(object):
-    def __init__(self, render_map):
+class DefaultLossCallback(object):
+    def __init__(self):
         self.iter_list = []
         self.report_storage = []
-        self.render_map = render_map
 
-    def callback(self, i_step, reports, model_path):
+    def callback(self, i_step, metrics, reports, model_path):
         # Interpret report matching to the report defined in reports by create_model
         print("Iter: %d, Train loss: %.4f, Test loss: %.4f" % (i_step, reports[0], reports[1]))
         self.iter_list.append(i_step)
@@ -20,14 +19,20 @@ class DefaultLossCalback(object):
             self.report_storage[i].append(reports[i])
 
         # A map defining how to render the reports.
-        for render in self.render_map:
-            title, data = render
-            plot_data = []
-            for date in data:
-                label, report_id = date
-                plot_data.append((label, self.iter_list, self.report_storage[report_id]))
+        plot_data = {}
+        report_id = 0
+        for i in range(len(metrics)):
+            metric = metrics[i]
+            for idx in range(len(metric.values())):
+                label = list(metric.keys())[idx]
+                report = self.report_storage[report_id]
+                report_id += 1
+                if label.split("/")[-1] not in plot_data:
+                    plot_data[label.split("/")[-1]] = [label.split("/")[-1]]
+                plot_data[label.split("/")[-1]].append((label, self.iter_list, report))
 
-            create_plot(title, model_path, plot_data)
+        for q in plot_data.values():
+            create_plot(q[0], model_path, q[1:])
 
 
 def create_plot(title, model_path, data):

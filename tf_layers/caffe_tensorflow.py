@@ -6,6 +6,7 @@
 
 import numpy as np
 import tensorflow as tf
+import layers.tile_2d
 
 DEFAULT_PADDING = 'SAME'
 
@@ -277,65 +278,8 @@ class Network(object):
         return tf.nn.dropout(input, keep, name=name)
 
     @layer
-    def tile_2d_simple(self, input, k_x, k_y, name, reorder_required=True):
-        size = input.get_shape().as_list()
-        c, h, w = size[3], size[1], size[2]
-        batch_size = size[0]
-
-        # Check if tiling is possible and define output shape.
-        assert c % (k_x * k_y) == 0
-
-        tmp = input
-
-        if reorder_required:
-            output_channels = int(c / (k_x * k_y))
-            channels = tf.unstack(tmp, axis=-1)
-            reordered_channels = [None for _ in range(len(channels))]
-            for o in range(output_channels):
-                for i in range(k_x * k_y):
-                    target = o + i * output_channels
-                    source = o * (k_x * k_y) + i
-                    reordered_channels[target] = channels[source]
-            tmp = tf.stack(reordered_channels, axis=-1)
-
-        # Actual tilining
-        with tf.variable_scope(name) as scope:
-            tmp = tf.transpose(tmp, [0, 2, 1, 3])
-            tmp = tf.reshape(tmp, (batch_size, w, int(h * k_y), int(c / (k_y))))
-            tmp = tf.transpose(tmp, [0, 2, 1, 3])
-            tmp = tf.reshape(tmp, (batch_size, int(h * k_y), int(w * k_x), int(c / (k_y * k_x))))
-
-        return tmp
-
-    @layer
-    def tile_2d(self, input, k_x, k_y, name):
-        size = input.get_shape().as_list()
-        c, h, w = size[3], size[1], size[2]
-        batch_size = size[0]
-
-        # Check if tiling is possible and define output shape.
-        assert c % (k_x * k_y) == 0
-        # shape = tf.constant([batch_size, h * k_y, w * k_x, c / (k_x * k_y)])
-        t_h = h * k_y
-        t_w = w * k_x
-        t_c = c / (k_x * k_y)
-
-        input = tf.transpose(input, [1, 2, 3, 0])
-        # Define the indices for gathering
-        indices = []
-        # Order in Tensor: batch, h, w, chan
-        for y in range(t_h):
-            indices.append([])
-            for x in range(t_w):
-                indices[y].append([])
-                for chan in range(t_c):
-                    orig_chan = chan * (k_x * k_y) + x % k_x + k_x * (y % k_y)
-                    orig_x = int(x / k_x)
-                    orig_y = int(y / k_y)
-                    indices[y][x].append([orig_y, orig_x, orig_chan])
-
-        result = tf.gather_nd(input, tf.constant(indices), name=name)
-        return tf.transpose(result, [3, 0, 1, 2])
+    def tile_2d(self, input, k_x, k_y, name, reorder_required=True):
+        return layers.tile_2d.tile_2d(input, k_x, k_y, name, reorder_required)
 
     @multi_output_layer
     def split(self, input, split_points, axis, output_names, name):

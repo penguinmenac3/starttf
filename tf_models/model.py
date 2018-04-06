@@ -4,8 +4,14 @@ import tensorflow as tf
 import json
 
 
-def train(hyper_params, session, train_op, feed_dict, reports=[], callback=None, enable_timing=False):
+def train(hyper_params, session, train_op, metrics=[], callback=None, enable_timing=False):
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
+    
+    # Collect metrics operations.
+    metric_ops = []
+    for i in range(len(metrics)):
+        metric = metrics[i]
+        metric_ops += list(metric.values())
 
     # Init vars.
     init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
@@ -33,11 +39,11 @@ def train(hyper_params, session, train_op, feed_dict, reports=[], callback=None,
     for i_step in range(hyper_params.train.iters):
         # Train step.
         if i_step % hyper_params.train.summary_iters != 0:
-            _ = session.run([train_op], feed_dict=feed_dict)
+            _ = session.run([train_op])
         else:  # Do validation and summary.
-            results = session.run(reports + [train_op, merged], feed_dict=feed_dict)
+            results = session.run(metric_ops + [train_op, merged])
             if callback is not None:
-                callback(i_step, results[:-2], hyper_params.train.checkpoint_path + "/" + time_stamp)
+                callback(i_step, metrics, results[:-2], hyper_params.train.checkpoint_path + "/" + time_stamp)
             else:
                 print("Iter: %d" % i_step)
             summary = results[-1]

@@ -9,17 +9,17 @@ from tensorflow.contrib.framework.python.ops import arg_scope
 trunc_normal = lambda stddev: init_ops.truncated_normal_initializer(0.0, stddev)
 
 
-def create_model(hyper_params, input_tensor, reuse_weights=False, deploy_model=False, feed_dict={}):
+def create_model(input_tensor, mode, hyper_params):
     model = {}
     l2_weight = 0.0
 
     spatial_squeeze = False
     dropout_keep_prob = 0.5
-    is_training = not deploy_model
+    is_training = mode == tf.estimator.ModeKeys.TRAIN
     num_classes = 10
 
     with tf.variable_scope('alexnet_v2') as scope:
-        if reuse_weights:
+        if mode == tf.estimator.ModeKeys.EVAL:
             scope.reuse_variables()
 
         net = layers.conv2d(input_tensor, 64, [11, 11], 4, padding='VALID', scope='conv1')
@@ -68,24 +68,4 @@ def create_model(hyper_params, input_tensor, reuse_weights=False, deploy_model=F
         # Collect outputs for api of network.
         model["logits"] = net
         model["probs"] = tf.nn.softmax(net)
-    return model, feed_dict
-
-
-def create_loss(hyper_params, train_model, validation_model, train_labels, validation_labels=None):
-    reports = []
-    train_labels = tf.reshape(train_labels, [-1, 10])
-    loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=train_model["logits"], labels=train_labels))
-    train_op = tf.train.RMSPropOptimizer(learning_rate=hyper_params.train.learning_rate,
-                                         decay=hyper_params.train.decay).minimize(loss_op)
-    tf.summary.scalar('train/loss', loss_op)
-    reports.append(loss_op)
-
-    # Create a validation loss if possible.
-    if validation_labels is not None:
-        validation_labels = tf.reshape(validation_labels, [-1, 10])
-        validation_loss_op = tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits(logits=validation_model["logits"], labels=validation_labels))
-        tf.summary.scalar('validation/loss', validation_loss_op)
-        reports.append(validation_loss_op)
-
-    return train_op, reports
+    return model

@@ -35,13 +35,14 @@ def conv(input, kernel, biases, k_h, k_w, c_o, s_h, s_w,  padding="VALID", group
     return  tf.reshape(tf.nn.bias_add(conv, biases), [-1]+conv.get_shape().as_list()[1:])
 
 
-def create_model(hyper_params, input_tensor, reuse_weights=False, deploy_model=False, feed_dict={}, weight_file="tf_models/weights/bvlc_alexnet.npy", sess=None):
+def create_model(input_tensor, mode, hyper_params):
+    weight_file = hyper_params.arch.weight_file
     #net_data = np.load(open(weight_file, "rb"), encoding="latin1").item()
     net_data = np.load(weight_file).item()
     model = {}
 
     with tf.variable_scope('alexnet') as scope:
-        if reuse_weights:
+        if mode == tf.estimator.ModeKeys.EVAL:
             scope.reuse_variables()
         #conv1
         #conv(11, 11, 96, 4, 4, padding='VALID', name='conv1')
@@ -156,24 +157,4 @@ def create_model(hyper_params, input_tensor, reuse_weights=False, deploy_model=F
         model["logits"] = fc8
         model["probs"] = prob
 
-    return model, feed_dict
-
-
-def create_loss(hyper_params, train_model, validation_model, train_labels, validation_labels=None):
-    reports = []
-    train_labels = tf.reshape(train_labels, [-1, 1000])
-    loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=train_model["logits"], labels=train_labels))
-    train_op = tf.train.RMSPropOptimizer(learning_rate=hyper_params.train.learning_rate,
-                                         decay=hyper_params.train.decay).minimize(loss_op)
-    tf.summary.scalar('train/loss', loss_op)
-    reports.append(loss_op)
-
-    # Create a validation loss if possible.
-    if validation_labels is not None:
-        validation_labels = tf.reshape(validation_labels, [-1, 1000])
-        validation_loss_op = tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits(logits=validation_model["logits"], labels=validation_labels))
-        tf.summary.scalar('validation/loss', validation_loss_op)
-        reports.append(validation_loss_op)
-
-    return train_op, reports
+    return model

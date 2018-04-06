@@ -13,11 +13,12 @@ import numpy as np
 from scipy.misc import imread, imresize
 from utils.imagenet_classes import class_names
 
-def create_model(hyper_params, input_tensor, reuse_weights=False, deploy_model=False, feed_dict={}, weight_file=None, sess=None, encoder_only=False):
+
+def create_model(input_tensor, mode, hyper_params):
     outputs = {}
 
     with tf.variable_scope('vgg16') as scope:
-        if reuse_weights:
+        if mode == tf.estimator.ModeKeys.EVAL:
             scope.reuse_variables()
 
         parameters = []
@@ -205,7 +206,7 @@ def create_model(hyper_params, input_tensor, reuse_weights=False, deploy_model=F
                                padding='SAME',
                                name='pool4')
 
-        if not encoder_only:
+        if not hyper_params.vgg16.encoder_only:
             # fc1
             with tf.name_scope('fc1') as scope:
                 shape = int(np.prod(pool5.get_shape()[1:]))
@@ -242,13 +243,6 @@ def create_model(hyper_params, input_tensor, reuse_weights=False, deploy_model=F
         
                 probs = tf.nn.softmax(fc3l)
 
-        if weight_file is not None and sess is not None:
-            weights = np.load(weight_file)
-            keys = sorted(weights.keys())
-            for i, k in enumerate(keys):
-                print(i, k, np.shape(weights[k]))
-                sess.run(parameters[i].assign(weights[k]))
-
         # Put all relevant layers into the api of the model.
         outputs["conv1_1"] = conv1_1
         outputs["conv1_2"] = conv1_2
@@ -268,46 +262,19 @@ def create_model(hyper_params, input_tensor, reuse_weights=False, deploy_model=F
         outputs["conv5_2"] = conv5_2
         outputs["conv5_3"] = conv5_3
         outputs["pool5"] = pool5
-        if not encoder_only:
+        if not hyper_params.vgg16.encoder_only:
             outputs["fc1"] = fc1
             outputs["fc2"] = fc2
             outputs["logits"] = fc3l
             outputs["probs"] = probs
-    return outputs, feed_dict
+
+        outputs["parameters"] = parameters
+    return outputs
 
 
-def create_loss(hyper_params, train_model, validation_model, train_labels, validation_labels=None):
-    reports = []
-    train_labels = tf.reshape(train_labels, [-1, 1000])
-    loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=train_model["logits"], labels=train_labels))
-    train_op = tf.train.RMSPropOptimizer(learning_rate=hyper_params.train.learning_rate,
-                                         decay=hyper_params.train.decay).minimize(loss_op)
-    tf.summary.scalar('train/loss', loss_op)
-    reports.append(loss_op)
-
-    # Create a validation loss if possible.
-    if validation_labels is not None:
-        validation_labels = tf.reshape(validation_labels, [-1, 1000])
-        validation_loss_op = tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits(logits=validation_model["logits"], labels=validation_labels))
-        tf.summary.scalar('validation/loss', validation_loss_op)
-        reports.append(validation_loss_op)
-
-    return train_op, reports
-
-
-if __name__ == '__main__':
-    hyper_params = object()
-
-    sess = tf.Session()
-    imgs = tf.placeholder(tf.float32, [None, 224, 224, 3])
-    deploy_model, feed_dict = create_model(hyper_params, imgs, deploy_model=True, weight_file='tf_models/weights/vgg16_weights.npz', sess=sess)
-
-    img1 = imread('test.png', mode='RGB')
-    img1 = imresize(img1, (224, 224))
-
-    feed_dict[imgs] = [img1]
-    prob = sess.run(deploy_model["probs"], feed_dict=feed_dict)[0]
-    preds = (np.argsort(prob)[::-1])[0:5]
-    for p in preds:
-        print(class_names[p], prob[p])
+def load_weights(vgg_model, weight_file, session):
+    weights = np.load(weight_file)
+    keys = sorted(weights.keys())
+    for i, k in enumerate(keys):
+        print(i, k, np.shape(weights[k]))
+        session.run(model["parameters"][i].assign(weights[k]))

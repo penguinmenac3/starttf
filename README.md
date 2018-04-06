@@ -56,7 +56,7 @@ Just check the comment at the top of their source files.
 
 ### Tensorflow Models
 
-Every [model](tf_models/model.py) supports setup, predict, fit and export methods.
+Every model returns a dictionary containing output tensors.
 
 1. [Alexnet (single stream version)](tf_models/alexnet.py)
 2. [VGG 16](tf_models/vgg16.py)
@@ -97,7 +97,7 @@ Some samples that should help getting into stuff.
 ### Tensorflow Examples
 
 1. [MNIST](tf_examples/mnist.py)
-2. LFW [WIP]
+2. LFW [TODO]
 3. Imagenet (Baselines) [TODO]
 4. Bounding Box Regression [TODO]
 5. Segmentations [TODO]
@@ -132,23 +132,27 @@ On non publically availible data:
 
 ### Predefined Models and losses
 
-There are pre-implemented models.
-Which can be easily glued together in a model function.
-`mode` is a `tf.estimator.ModeKeys` to be Estimator compatible.
+There are pre-implemented models which can be glued together and trained with just a few lines.
 
 ```python
-from tf_models.mnist import create_loss, create_model
+# [...]
+# Create a training model.
+print("Creating Model")
+train_model = create_model(train_features, TRAIN, hyper_params)
+train_loss, train_metrics = create_loss(train_model, train_labels, TRAIN, hyper_params)
+train_op = tf.train.RMSPropOptimizer(learning_rate=hyper_params.train.learning_rate,
+                                     decay=hyper_params.train.decay).minimize(train_loss)
 
-def my_model_fn(features, labels, mode, hyper_params):
-    model = create_model(features, mode, hyper_params)
-    losses = create_loss(model, labels, mode, hyper_params)
-    train_op = None
-
-    if mode == tf.estimator.ModeKeys.TRAIN:
-        train_op = tf.train.RMSPropOptimizer(learning_rate=hyper_params.train.learning_rate,
-                                     decay=hyper_params.train.decay).minimize(train_losses[0])
+# Create a validation model.
+validation_model = create_model(validation_features, EVAL, hyper_params)
+_, validation_metrics = create_loss(validation_model, validation_labels, EVAL, hyper_params)
     
-    return model, losses, train_op
+# Train model.
+with tf.Session(config=get_default_config()) as session:
+    checkpoint_path = train(hyper_params, session, train_op,
+                            metrics=[train_metrics, validation_metrics],
+                            callback=DefaultLossCallback().callback,
+                            enable_timing=True)
 ```
 
 ### Quick Model Definition
@@ -176,16 +180,16 @@ def create_model(input_tensor, mode, hyper_params):
 
 ```python
 def create_loss(model, labels, mode, hyper_params):
-    mode_name = utils.mode_to_str(mode)
+    mode_name = mode_to_str(mode)
+    metrics = {}
 
-    losses = []
-    
-    # Add a loss (also to tensorboard)
-    loss_op = ...
-    losses.append(loss_op)
+    # Add loss
+    labels = tf.reshape(labels, [-1, 10])
+    loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=model["logits"], labels=labels))
     tf.summary.scalar(mode_name + '/loss', loss_op)
+    metrics[mode_name + '/loss'] = loss_op
 
-    return losses
+    return loss_op, metrics
 ```
 
 ### TFRecord Integration
@@ -211,6 +215,36 @@ No worries when to summarize and how to call it and merging.
 Simply define your summary and the rest is handled by the meta model in the fit method.
 
 ![Screenshot showing code to include tensorboard on the left and tensorboard on the right](images/tensorboard_integration.png)
+
+### TF Estimator support
+
+Model and loss can be easily glued together in a model function and used with tf estimator.
+`mode` is a `tf.estimator.ModeKeys` to be Estimator compatible.
+
+```python
+from tf_models.mnist import create_model
+from tf_losses.mnist import create_loss
+
+def my_model_fn(features, labels, mode, hyper_params):
+    # Create a model
+    model = create_model(features, mode, hyper_params)
+    if tf.estimator.ModeKeys.PREDICT:
+        return tf.estimator.ModeKeys.EstimatorSpec(mode, predictions=model)
+    
+    # Add a loss
+    loss, metrics = create_loss(model, labels, mode, hyper_params)
+    if tf.estimators.ModeKeys.EVAL:
+        return tf.estimator.ModeKeys.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics)
+
+    # Define a training operation
+    if mode == tf.estimator.ModeKeys.TRAIN:
+        train_op = tf.train.RMSPropOptimizer(learning_rate=hyper_params.train.learning_rate,
+                                     decay=hyper_params.train.decay).minimize(loss)
+    
+        return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
+
+    raise RuntimeError("Unexpected mode.")
+```
 
 ### More details
 

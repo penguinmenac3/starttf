@@ -5,29 +5,31 @@ from tensorflow.contrib import layers
 from tensorflow.contrib import rnn
 
 
-def create_model(hyper_params, input_tensor, reuse_weights=False, deploy_model=False, feed_dict={}):
+def create_model(input_tensor, mode, hyper_params):
     outputs = {}
     with tf.variable_scope('GruFunctionClassifier') as scope:
-        if reuse_weights:
+        if mode == tf.estimator.ModeKeys.EVAL or mode == tf.estimator.ModeKeys.PREDICT:
             scope.reuse_variables()
 
+        batch_size = hyper_params.train.batch_size
+        if mode == tf.estimator.ModeKeys.EVAL:
+            batch_size = hyper_params.train.validation_batch_size
+        if mode == tf.estimator.ModeKeys.PREDICT:
+            batch_size = 1
+
         # Define inputs
-        input_tensor = tf.reshape(input_tensor, (hyper_params.train.batch_size, hyper_params.arch.sequence_length, 1))
-        Hin = tf.placeholder(tf.float32,
-                             [None, hyper_params.arch.hidden_layer_size * hyper_params.arch.hidden_layer_depth],
-                             name='Hin')  # [ BATCHSIZE, INTERNALSIZE * NLAYERS]
-        feed_dict[Hin] = np.zeros(
-            [hyper_params.train.batch_size, hyper_params.arch.hidden_layer_size * hyper_params.arch.hidden_layer_depth])
+        input_tensor = tf.reshape(input_tensor, (batch_size, hyper_params.arch.sequence_length, 1))
+        Hin = tf.zeros([batch_size, hyper_params.arch.hidden_layer_size * hyper_params.arch.hidden_layer_depth], tf.float32, name="Hin")
 
         # Define the actual cells
         cells = [rnn.GRUCell(hyper_params.arch.hidden_layer_size) for _ in range(hyper_params.arch.hidden_layer_depth)]
 
         # "naive dropout" implementation
-        if not deploy_model:
+        if mode == tf.estimator.ModeKeys.TRAIN:
             cells = [rnn.DropoutWrapper(cell, input_keep_prob=hyper_params.arch.pkeep) for cell in cells]
 
         multicell = rnn.MultiRNNCell(cells, state_is_tuple=False)
-        if not deploy_model:
+        if mode == tf.estimator.ModeKeys.TRAIN:
             multicell = rnn.DropoutWrapper(multicell,
                                            output_keep_prob=hyper_params.arch.pkeep)  # dropout for the softmax layer
 
@@ -44,24 +46,4 @@ def create_model(hyper_params, input_tensor, reuse_weights=False, deploy_model=F
         last = tf.gather(output, int(output.get_shape()[0]) - 1)
         outputs["logits"] = layers.linear(last, hyper_params.arch.output_dimension)
         outputs["probs"] = tf.nn.softmax(outputs["logits"], name="probs")
-    return outputs, feed_dict
-
-
-def create_loss(hyper_params, train_model, validation_model, train_labels, validation_labels=None):
-    reports = []
-    labels = tf.reshape(train_labels, [-1, hyper_params.arch.output_dimension])
-    loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=train_model["logits"], labels=labels))
-    train_op = tf.train.RMSPropOptimizer(learning_rate=hyper_params.train.learning_rate,
-                                         decay=hyper_params.train.decay).minimize(loss_op)
-    tf.summary.scalar('train/loss', loss_op)
-    reports.append(loss_op)
-
-    # Create a validation loss if possible.
-    if validation_labels is not None:
-        validation_labels = tf.reshape(validation_labels, [-1, hyper_params.arch.output_dimension])
-        validation_loss_op = tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits(logits=validation_model["logits"], labels=validation_labels))
-        tf.summary.scalar('validation/loss', validation_loss_op)
-        reports.append(validation_loss_op)
-
-    return train_op, reports
+    return outputs
