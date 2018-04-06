@@ -13,7 +13,7 @@ import numpy as np
 from scipy.misc import imread, imresize
 from utils.imagenet_classes import class_names
 
-def create_model(hyper_params, input_tensor, reuse_weights=False, deploy_model=False, feed_dict={}, weight_file=None, sess=None):
+def create_model(hyper_params, input_tensor, reuse_weights=False, deploy_model=False, feed_dict={}, weight_file=None, sess=None, encoder_only=False):
     outputs = {}
 
     with tf.variable_scope('vgg16') as scope:
@@ -205,41 +205,42 @@ def create_model(hyper_params, input_tensor, reuse_weights=False, deploy_model=F
                                padding='SAME',
                                name='pool4')
 
-        # fc1
-        with tf.name_scope('fc1') as scope:
-            shape = int(np.prod(pool5.get_shape()[1:]))
-            fc1w = tf.Variable(tf.truncated_normal([shape, 4096],
-                                                         dtype=tf.float32,
-                                                         stddev=1e-1), name='weights')
-            fc1b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32),
-                                 trainable=True, name='biases')
-            pool5_flat = tf.reshape(pool5, [-1, shape])
-            fc1l = tf.nn.bias_add(tf.matmul(pool5_flat, fc1w), fc1b)
-            fc1 = tf.nn.relu(fc1l)
-            parameters += [fc1w, fc1b]
+        if not encoder_only:
+            # fc1
+            with tf.name_scope('fc1') as scope:
+                shape = int(np.prod(pool5.get_shape()[1:]))
+                fc1w = tf.Variable(tf.truncated_normal([shape, 4096],
+                                                             dtype=tf.float32,
+                                                             stddev=1e-1), name='weights')
+                fc1b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32),
+                                     trainable=True, name='biases')
+                pool5_flat = tf.reshape(pool5, [-1, shape])
+                fc1l = tf.nn.bias_add(tf.matmul(pool5_flat, fc1w), fc1b)
+                fc1 = tf.nn.relu(fc1l)
+                parameters += [fc1w, fc1b]
 
-        # fc2
-        with tf.name_scope('fc2') as scope:
-            fc2w = tf.Variable(tf.truncated_normal([4096, 4096],
-                                                         dtype=tf.float32,
-                                                         stddev=1e-1), name='weights')
-            fc2b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32),
-                                 trainable=True, name='biases')
-            fc2l = tf.nn.bias_add(tf.matmul(fc1, fc2w), fc2b)
-            fc2 = tf.nn.relu(fc2l)
-            parameters += [fc2w, fc2b]
+            # fc2
+            with tf.name_scope('fc2') as scope:
+                fc2w = tf.Variable(tf.truncated_normal([4096, 4096],
+                                                             dtype=tf.float32,
+                                                             stddev=1e-1), name='weights')
+                fc2b = tf.Variable(tf.constant(1.0, shape=[4096], dtype=tf.float32),
+                                     trainable=True, name='biases')
+                fc2l = tf.nn.bias_add(tf.matmul(fc1, fc2w), fc2b)
+                fc2 = tf.nn.relu(fc2l)
+                parameters += [fc2w, fc2b]
 
-        # fc3
-        with tf.name_scope('fc3') as scope:
-            fc3w = tf.Variable(tf.truncated_normal([4096, 1000],
-                                                         dtype=tf.float32,
-                                                         stddev=1e-1), name='weights')
-            fc3b = tf.Variable(tf.constant(1.0, shape=[1000], dtype=tf.float32),
-                                 trainable=True, name='biases')
-            fc3l = tf.nn.bias_add(tf.matmul(fc2, fc3w), fc3b)
-            parameters += [fc3w, fc3b]
+            # fc3
+            with tf.name_scope('fc3') as scope:
+                fc3w = tf.Variable(tf.truncated_normal([4096, 1000],
+                                                             dtype=tf.float32,
+                                                             stddev=1e-1), name='weights')
+                fc3b = tf.Variable(tf.constant(1.0, shape=[1000], dtype=tf.float32),
+                                     trainable=True, name='biases')
+                fc3l = tf.nn.bias_add(tf.matmul(fc2, fc3w), fc3b)
+                parameters += [fc3w, fc3b]
         
-        probs = tf.nn.softmax(fc3l)
+                probs = tf.nn.softmax(fc3l)
 
         if weight_file is not None and sess is not None:
             weights = np.load(weight_file)
@@ -267,10 +268,11 @@ def create_model(hyper_params, input_tensor, reuse_weights=False, deploy_model=F
         outputs["conv5_2"] = conv5_2
         outputs["conv5_3"] = conv5_3
         outputs["pool5"] = pool5
-        outputs["fc1"] = fc1
-        outputs["fc2"] = fc2
-        outputs["logits"] = fc3l
-        outputs["probs"] = probs
+        if not encoder_only:
+            outputs["fc1"] = fc1
+            outputs["fc2"] = fc2
+            outputs["logits"] = fc3l
+            outputs["probs"] = probs
     return outputs, feed_dict
 
 
