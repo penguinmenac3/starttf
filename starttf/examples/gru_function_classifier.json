@@ -7,7 +7,7 @@
         "validation_batch_size": 200,
         "iters": 600,
         "summary_iters": 50,
-        "checkpoint_path": "tf_models/checkpoints/gru_function_classifier"
+        "checkpoint_path": "checkpoints/gru_function_classifier"
     },
     "arch": {
         "sequence_length": 100,

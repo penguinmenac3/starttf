@@ -10,8 +10,6 @@
 
 import tensorflow as tf
 import numpy as np
-from scipy.misc import imread, imresize
-from utils.imagenet_classes import class_names
 
 
 def create_model(input_tensor, mode, hyper_params):

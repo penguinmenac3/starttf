@@ -33,7 +33,7 @@ def train(hyper_params, session, train_op, metrics=[], callback=None, enable_tim
 
     # Train
     print("Training Model: To reduce overhead no outputs are done. Use tensorboard to see your progress.")
-    print("python -m tensorboard.main --logdir=tf_models/checkpoints")
+    print("python -m tensorboard.main --logdir=checkpoints")
     last_printout = time.time()
     last_printout_iter = -1
     for i_step in range(hyper_params.train.iters):

@@ -1,3 +1,0 @@
-[submodule "datasets"]
-	path = datasets
-	url = git@github.com:penguinmenac3/datasets.git

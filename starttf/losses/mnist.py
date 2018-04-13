@@ -1,5 +1,5 @@
 import tensorflow as tf
-from utils.misc import mode_to_str
+from starttf.utils.misc import mode_to_str
 
 def create_loss(model, labels, mode, hyper_params):
     mode_name = mode_to_str(mode)

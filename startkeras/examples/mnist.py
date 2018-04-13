@@ -1,12 +1,10 @@
 from keras_models.mnist_cnn import mnist_toy_net, prepare_data
 from datasets.classification.mnist import mnist
 from keras.optimizers import SGD
-from keras.utils import plot_model
-from utils.plot_losses import KerasPlotLosses
-from utils.dict2obj import json_file_to_object
+from starttf.utils import KerasPlotLosses
+from starttf.utils import json_file_to_object
 import time
 import datetime
-import numpy as np
 import os
 from datasets.batch_generator import batch_generator
 

@@ -2,16 +2,16 @@ import math
 import tensorflow as tf
 import numpy as np
 
-from utils.hyperparams import load_params
-from utils.plot_losses import create_plot, DefaultLossCallback
-from utils.session_config import get_default_config
-from utils.generic_data_loader import load_data
-from utils.misc import mode_to_str
+from starttf.utils.hyperparams import load_params
+from starttf.utils.plot_losses import DefaultLossCallback
+from starttf.utils.session_config import get_default_config
+from starttf.utils.generic_data_loader import load_data
+from starttf.utils.misc import mode_to_str
 
-from datasets.classification.function_generator import function_generator
+from opendatalake.classification.function_generator import function_generator
 
-from tf_models.gru_function_classifier import create_model
-from tf_models.model import train, export_graph, load_graph
+from starttf.models.gru_function_classifier import create_model
+from starttf.models.model import train, export_graph, load_graph
 
 GENERATE_DATA = False
 TRAIN = tf.estimator.ModeKeys.TRAIN

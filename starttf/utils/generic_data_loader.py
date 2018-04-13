@@ -1,5 +1,5 @@
 import os
-from datasets.tfrecords import write_tf_records, read_tf_records, PHASE_TRAIN, PHASE_VALIDATION
+from opendatalake.tfrecords import write_tf_records, read_tf_records, PHASE_TRAIN, PHASE_VALIDATION
 
 
 def load_data(hyper_params, generate_data_fn, data_tmp_folder, force_generate_data=False):

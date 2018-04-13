@@ -2,10 +2,9 @@ from keras_models.lfw import deeplfw, prepare_data, create_triplets
 from datasets.classification.named_folders import named_folders
 from keras.optimizers import SGD
 from keras.utils import plot_model
-from utils.plot_losses import KerasPlotLosses
+from starttf.utils import KerasPlotLosses
 import time
 import datetime
-import numpy as np
 from datasets.tfrecords import PHASE_VALIDATION, PHASE_TRAIN
 from datasets.batch_generator import batch_generator
 import os

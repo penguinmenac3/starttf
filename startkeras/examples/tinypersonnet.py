@@ -1,15 +1,12 @@
 from keras_models.tinypersonnet import tinypersonnet, prepare_data
 from datasets.classification.named_folders import named_folders
 from keras.optimizers import SGD, RMSprop
-from keras.utils import plot_model
 import os
-from utils.plot_losses import KerasPlotLosses
+from starttf.utils import KerasPlotLosses
 import time
 import datetime
-import numpy as np
-import matplotlib.pyplot as plt
 from datasets.batch_generator import batch_generator
-from utils.dict2obj import json_file_to_object
+from starttf.utils import json_file_to_object
 
 DEBUG = False
 

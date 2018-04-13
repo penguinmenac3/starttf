@@ -6,7 +6,7 @@
 
 import numpy as np
 import tensorflow as tf
-import layers.tile_2d
+import starttf.layers.tile_2d
 
 DEFAULT_PADDING = 'SAME'
 
@@ -279,7 +279,7 @@ class Network(object):
 
     @layer
     def tile_2d(self, input, k_x, k_y, name, reorder_required=True):
-        return layers.tile_2d.tile_2d(input, k_x, k_y, name, reorder_required)
+        return starttf.layers.tile_2d.tile_2d(input, k_x, k_y, name, reorder_required)
 
     @multi_output_layer
     def split(self, input, split_points, axis, output_names, name):

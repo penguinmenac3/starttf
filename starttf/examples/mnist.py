@@ -2,17 +2,17 @@ import tensorflow as tf
 
 print(tf.__version__)
 
-from utils.hyperparams import load_params
-from utils.plot_losses import create_plot, DefaultLossCallback
-from utils.session_config import get_default_config
-from utils.generic_data_loader import load_data
+from starttf.utils.hyperparams import load_params
+from starttf.utils.plot_losses import DefaultLossCallback
+from starttf.utils.session_config import get_default_config
+from starttf.utils.generic_data_loader import load_data
 
-from datasets.classification.mnist import mnist
-from datasets.tfrecords import PHASE_TRAIN, PHASE_VALIDATION
+from opendatalake.classification.mnist import mnist
+from opendatalake.tfrecords import PHASE_TRAIN, PHASE_VALIDATION
 
-from tf_models.model import train, export_graph, load_graph
-from tf_models.mnist import create_model
-from tf_losses.mnist import create_loss
+from starttf.models.model import train, export_graph
+from starttf.models.mnist import create_model
+from starttf.losses.mnist import create_loss
 
 GENERATE_DATA = False
 TRAIN = tf.estimator.ModeKeys.TRAIN
@@ -28,7 +28,7 @@ def generate_data_fn():
 
 def main():
     # Load hyper params and training data
-    hyper_params = load_params("tf_examples/mnist.json")
+    hyper_params = load_params("starttf/examples/mnist.json")
 
     # Load training data
     print("Loading data")
