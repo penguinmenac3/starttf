@@ -31,21 +31,17 @@ Or launch your code from the command line like the example bellow.
 # Activate your virtual environment (in my case venv)
 # Then do the following
 (venv) $ cd /PATH/TO/deeplearning-starterpack
-(venv) $ pyhon -m examples.mnist
+(venv) $ pyhon -m starttf.examples.mnist
 ```
 
 ## Datasets
 
 For dataset support I use my own dataset library including bindings to load many popular datasets in a unified format.
 
-However, to use it you will need to initialize git submodules if you did not do a recursive clone:
-
-```bash
-git submodule update --init --recursive
-```
+You will have to clone [opendatalake](https://github.com/penguinmenac3/opendatalake) and add it to your PYTHONPATH.
 
 The dataset loader basically supports **classification**, **segmentation**, **regression** (including **2d- and 3d-detection**) and some visualization helpers.
-For details checkout the readme of the project [**here**](https://github.com/penguinmenac3/datasets/blob/master/README.md).
+For details checkout the readme of the project [**here**](https://github.com/penguinmenac3/opendatalake/blob/master/README.md).
 
 ## Models
 
@@ -58,8 +54,8 @@ Just check the comment at the top of their source files.
 
 Every model returns a dictionary containing output tensors.
 
-1. [Alexnet (single stream version)](tf_models/alexnet.py)
-2. [VGG 16](tf_models/vgg16.py)
+1. [Alexnet (single stream version)](starttf/models/alexnet.py)
+2. [VGG 16](starttf/models/vgg16.py)
 3. GoogLeNet (Inception v3) [TODO]
 4. Overfeat/Tensorbox [TODO]
 5. ResNet [TODO]
@@ -69,25 +65,25 @@ Every model returns a dictionary containing output tensors.
 
 More non famous models by myself:
 
-1. [CNN for MNIST (Digit Recognition)](tf_models/mnist.py)
-2. [GRU Function Classifier](tf_models/gru_function_classifier.py)
+1. [CNN for MNIST (Digit Recognition)](starttf/models/mnist.py)
+2. [GRU Function Classifier](starttf/models/gru_function_classifier.py)
 3. CNN for LFW (Person Identification) [TODO]
 
 ### Keras Models
 
-1. [Alexnet (single stream version)](keras_models/alexnet.py)
-2. [VGG 16](keras_models/vgg_16.py)
-3. [GoogLeNet (Inception v3)](keras_models/googlenet.py)
+1. [Alexnet (single stream version)](startkeras/models/alexnet.py)
+2. [VGG 16](startkeras/models/vgg_16.py)
+3. [GoogLeNet (Inception v3)](startkeras/models/googlenet.py)
 4. Overfeat/Tensorbox [TODO]
 5. ResNet [TODO]
-6. [SegNet](keras_models/segnet.py)
+6. [SegNet](startkeras/models/segnet.py)
 7. Mask RCNN [TODO]
 8. monoDepth [TODO]
 
 More non famous models by myself:
 
-1. [CNN for MNIST](keras_models/mnist_cnn.py)
-2. [CNN for Person Classification](keras_models/tinypersonnet.py)
+1. [CNN for MNIST](startkeras/models/mnist_cnn.py)
+2. [CNN for Person Classification](startkeras/models/tinypersonnet.py)
 3. CNN for Person Identification [WIP]
 
 ## Examples
@@ -96,24 +92,24 @@ Some samples that should help getting into stuff.
 
 ### Tensorflow Examples
 
-1. [MNIST](tf_examples/mnist.py)
+1. [MNIST](starttf/examples/mnist.py)
 2. LFW [TODO]
 3. Imagenet (Baselines) [TODO]
 4. Bounding Box Regression [TODO]
 5. Segmentations [TODO]
 6. Instance Masks [TODO]
 7. Reinforcement Learning [TODO]
-8. [GRU Function Classifier](tf_examples/gru_function_classifier.py)
+8. [GRU Function Classifier](starttf/examples/gru_function_classifier.py)
 
 ### Keras Examples
 
 
 Notebooks:
-1. [MNIST Notebook](keras_examples/mnist.ipynb)
+1. [MNIST Notebook](startkeras/examples/mnist.ipynb)
 
 Code:
 
-1. [MNIST](keras_examples/mnist.py)
+1. [MNIST](startkeras/examples/mnist.py)
 2. LFW [WIP]
 3. Imagenet (Baselines) [TODO]
 4. Bounding Box Regression [TODO]
@@ -124,7 +120,7 @@ Code:
 On non publically availible data:
 (however can be used on your own data)
 
-1. [Simple Classification (Folder per Class)](keras_examples/tinypersonnet.py)
+1. [Simple Classification (Folder per Class)](startkeras/examples/tinypersonnet.py)
 
 
 ## Simple to use tensorflow
@@ -222,8 +218,8 @@ Model and loss can be easily glued together in a model function and used with tf
 `mode` is a `tf.estimator.ModeKeys` to be Estimator compatible.
 
 ```python
-from tf_models.mnist import create_model
-from tf_losses.mnist import create_loss
+from starttf.models.mnist import create_model
+from starttf.losses.mnist import create_loss
 
 def my_model_fn(features, labels, mode, hyper_params):
     # Create a model
