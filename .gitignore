@@ -3,6 +3,7 @@
 data
 checkpoints
 
+startkeras/models/weights/*
 nonpublic/*
 
 # Byte-compiled / optimized / DLL files
