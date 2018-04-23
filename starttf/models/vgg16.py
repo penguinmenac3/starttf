@@ -242,31 +242,31 @@ def create_model(input_tensor, mode, hyper_params):
                 probs = tf.nn.softmax(fc3l)
 
         # Put all relevant layers into the api of the model.
-        outputs["conv1_1"] = conv1_1
-        outputs["conv1_2"] = conv1_2
-        outputs["pool1"] = pool1
-        outputs["conv2_1"] = conv2_1
-        outputs["conv2_2"] = conv2_2
-        outputs["pool2"] = pool2
-        outputs["conv3_1"] = conv3_1
-        outputs["conv3_2"] = conv3_2
-        outputs["conv3_3"] = conv3_3
-        outputs["pool3"] = pool3
-        outputs["conv4_1"] = conv4_1
-        outputs["conv4_2"] = conv4_2
-        outputs["conv4_3"] = conv4_3
-        outputs["pool4"] = pool4
-        outputs["conv5_1"] = conv5_1
-        outputs["conv5_2"] = conv5_2
-        outputs["conv5_3"] = conv5_3
-        outputs["pool5"] = pool5
+        outputs["vgg16/conv1_1"] = conv1_1
+        outputs["vgg16/conv1_2"] = conv1_2
+        outputs["vgg16/pool1"] = pool1
+        outputs["vgg16/conv2_1"] = conv2_1
+        outputs["vgg16/conv2_2"] = conv2_2
+        outputs["vgg16/pool2"] = pool2
+        outputs["vgg16/conv3_1"] = conv3_1
+        outputs["vgg16/conv3_2"] = conv3_2
+        outputs["vgg16/conv3_3"] = conv3_3
+        outputs["vgg16/pool3"] = pool3
+        outputs["vgg16/conv4_1"] = conv4_1
+        outputs["vgg16/conv4_2"] = conv4_2
+        outputs["vgg16/conv4_3"] = conv4_3
+        outputs["vgg16/pool4"] = pool4
+        outputs["vgg16/conv5_1"] = conv5_1
+        outputs["vgg16/conv5_2"] = conv5_2
+        outputs["vgg16/conv5_3"] = conv5_3
+        outputs["vgg16/pool5"] = pool5
         if not hyper_params.vgg16.encoder_only:
-            outputs["fc1"] = fc1
-            outputs["fc2"] = fc2
+            outputs["vgg16/fc1"] = fc1
+            outputs["vgg16/fc2"] = fc2
             outputs["logits"] = fc3l
             outputs["probs"] = probs
 
-        outputs["parameters"] = parameters
+        outputs["vgg16/parameters"] = parameters
     return outputs
 
 
@@ -275,4 +275,4 @@ def load_weights(vgg_model, weight_file, session):
     keys = sorted(weights.keys())
     for i, k in enumerate(keys):
         print(i, k, np.shape(weights[k]))
-        session.run(model["parameters"][i].assign(weights[k]))
+        session.run(vgg_model["vgg16/parameters"][i].assign(weights[k]))
