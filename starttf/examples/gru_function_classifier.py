@@ -2,13 +2,14 @@ import math
 import tensorflow as tf
 import numpy as np
 
+from opendatalake.classification.function_generator import function_generator
+
 from starttf.utils.hyperparams import load_params
 from starttf.utils.plot_losses import DefaultLossCallback
 from starttf.utils.session_config import get_default_config
-from starttf.utils.generic_data_loader import load_data
 from starttf.utils.misc import mode_to_str
 
-from opendatalake.classification.function_generator import function_generator
+from starttf.tfrecords.autorecords import auto_read_write_data
 
 from starttf.models.gru_function_classifier import create_model
 from starttf.models.model import train, export_graph, load_graph
@@ -56,7 +57,7 @@ def main():
     # Load training data
     print("Loading data")
     data_tmp_folder = "data/.records/gru_function_classifier"
-    train_features, train_labels, validation_features, validation_labels = load_data(hyper_params, generate_data_fn, data_tmp_folder)
+    train_features, train_labels, validation_features, validation_labels = auto_read_write_data(hyper_params, generate_data_fn, data_tmp_folder)
 
     # Create a training model.
     print("Creating Model")

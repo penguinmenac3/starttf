@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 def create_model(input_tensor, mode, hyper_params):
     model = {}
     l2_weight = 0.0
@@ -8,7 +9,7 @@ def create_model(input_tensor, mode, hyper_params):
             scope.reuse_variables()
 
         # Prepare the inputs
-        x = tf.reshape(tensor=input_tensor, shape=(-1, 28, 28, 1), name="input")
+        x = tf.reshape(tensor=input_tensor["image"], shape=(-1, 28, 28, 1), name="input")
 
         # First Conv Block
         conv1 = tf.layers.conv2d(inputs=x, filters=16, kernel_size=(3, 3), strides=(1, 1), name="conv1",

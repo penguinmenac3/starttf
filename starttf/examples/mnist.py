@@ -2,16 +2,17 @@ import tensorflow as tf
 
 print(tf.__version__)
 
+from opendatalake.classification.mnist import mnist
+
 from starttf.utils.hyperparams import load_params
 from starttf.utils.plot_losses import DefaultLossCallback
 from starttf.utils.session_config import get_default_config
-from starttf.utils.generic_data_loader import load_data
 
-from opendatalake.classification.mnist import mnist
-from opendatalake.tfrecords import PHASE_TRAIN, PHASE_VALIDATION
+from starttf.tfrecords.autorecords import auto_read_write_data, PHASE_TRAIN, PHASE_VALIDATION
 
 from starttf.models.model import train, export_graph
 from starttf.models.mnist import create_model
+
 from starttf.losses.mnist import create_loss
 
 GENERATE_DATA = False
@@ -33,7 +34,7 @@ def main():
     # Load training data
     print("Loading data")
     data_tmp_folder = "data/.records/mnist"
-    train_features, train_labels, validation_features, validation_labels = load_data(hyper_params, generate_data_fn, data_tmp_folder)
+    train_features, train_labels, validation_features, validation_labels = auto_read_write_data(hyper_params, generate_data_fn, data_tmp_folder)
 
     # Create a training model.
     print("Creating Model")
