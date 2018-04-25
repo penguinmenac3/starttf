@@ -29,7 +29,7 @@ def _write_tf_record(data, record_filename, preprocess_feature=None, preprocess_
         if preprocess_feature is not None:
             feature = preprocess_feature(feature)
         if preprocess_label is not None:
-            label = preprocess_label(label)
+            label = preprocess_label(feature, label)
 
         feature_dict = {}
 
@@ -81,6 +81,10 @@ def write_data(prefix,
                num_threads,
                preprocess_feature=None,
                preprocess_label=None):
+    data_tmp_folder = "/".join(prefix.split("/")[:-1])
+    if not os.path.exists(data_tmp_folder):
+        os.makedirs(data_tmp_folder)
+
     args = [((threadable_generator, params), num_threads, i, (prefix + "_%d.tfrecords") % i,
                    preprocess_feature, preprocess_label) for i in range(num_threads)]
 
@@ -92,7 +96,7 @@ def write_data(prefix,
     if preprocess_feature is not None:
         sample_feature = preprocess_feature(sample_feature)
     if preprocess_label is not None:
-        sample_label = preprocess_label(sample_label)
+        sample_label = preprocess_label(sample_feature, sample_label)
 
     config = {"num_threads": num_threads,
               "features": sample_feature.keys(),
