@@ -15,21 +15,21 @@ def _bytes_feature(value):
 
 
 def _write_tf_record_pool_helper(args):
-    data, num_threads, i, record_filename, preprocess_feature, preprocess_label = args
+    hyper_params, data, num_threads, i, record_filename, preprocess_feature, preprocess_label = args
     data_fn, data_params = data
     thread_name = "%s:thread_%d" % (record_filename, i)
-    _write_tf_record(data_fn(data_params, num_threads, i), record_filename, preprocess_feature, preprocess_label, thread_name=thread_name)
+    _write_tf_record(hyper_params, data_fn(data_params, num_threads, i), record_filename, preprocess_feature, preprocess_label, thread_name=thread_name)
 
 
-def _write_tf_record(data, record_filename, preprocess_feature=None, preprocess_label=None, thread_name="thread"):
+def _write_tf_record(hyper_params, data, record_filename, preprocess_feature=None, preprocess_label=None, thread_name="thread"):
     writer = tf.python_io.TFRecordWriter(record_filename)
 
     samples_written = 0
     for feature, label in data:
         if preprocess_feature is not None:
-            feature = preprocess_feature(feature)
+            feature = preprocess_feature(hyper_params, feature)
         if preprocess_label is not None:
-            label = preprocess_label(feature, label)
+            label = preprocess_label(hyper_params, feature, label)
 
         feature_dict = {}
 
@@ -75,7 +75,8 @@ def _read_tf_record(record_filename, config):
     return outputs
 
 
-def write_data(prefix,
+def write_data(hyper_params,
+               prefix,
                threadable_generator,
                params,
                num_threads,
@@ -85,7 +86,7 @@ def write_data(prefix,
     if not os.path.exists(data_tmp_folder):
         os.makedirs(data_tmp_folder)
 
-    args = [((threadable_generator, params), num_threads, i, (prefix + "_%d.tfrecords") % i,
+    args = [(hyper_params, (threadable_generator, params), num_threads, i, (prefix + "_%d.tfrecords") % i,
                    preprocess_feature, preprocess_label) for i in range(num_threads)]
 
     # Retrieve a single sample
@@ -94,9 +95,9 @@ def write_data(prefix,
 
     # Preprocess samples, so that shapes and dtypes are correct.
     if preprocess_feature is not None:
-        sample_feature = preprocess_feature(sample_feature)
+        sample_feature = preprocess_feature(hyper_params, sample_feature)
     if preprocess_label is not None:
-        sample_label = preprocess_label(sample_feature, sample_label)
+        sample_label = preprocess_label(hyper_params, sample_feature, sample_label)
 
     config = {"num_threads": num_threads,
               "features": sample_feature.keys(),
@@ -155,8 +156,8 @@ def auto_read_write_data(hyper_params, generate_data_fn, data_tmp_folder, force_
         train_data, validation_data = generate_data_fn()
 
         # Write tf records
-        write_data(os.path.join(data_tmp_folder, PHASE_TRAIN), train_data[0], train_data[1], 4, preprocess_feature, preprocess_label)
-        write_data(os.path.join(data_tmp_folder, PHASE_VALIDATION), validation_data[0], validation_data[1], 2, preprocess_feature, preprocess_label)
+        write_data(hyper_params, os.path.join(data_tmp_folder, PHASE_TRAIN), train_data[0], train_data[1], 4, preprocess_feature, preprocess_label)
+        write_data(hyper_params, os.path.join(data_tmp_folder, PHASE_VALIDATION), validation_data[0], validation_data[1], 2, preprocess_feature, preprocess_label)
 
     # Load data with tf records.
     train_features, train_labels = read_data(os.path.join(data_tmp_folder, PHASE_TRAIN), hyper_params.train.batch_size)
