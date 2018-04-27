@@ -42,14 +42,17 @@ def train(hyper_params, session, train_op, metrics=[], callback=None, enable_tim
             _ = session.run([train_op])
         else:  # Do validation and summary.
             results = session.run(metric_ops + [train_op, merged])
-            if callback is not None:
-                callback(i_step, metrics, results[:-2], hyper_params.train.checkpoint_path + "/" + time_stamp)
-            else:
-                print("Iter: %d" % i_step)
-            summary = results[-1]
-            log_writer.add_summary(summary, i_step)
-            saver.save(session, hyper_params.train.checkpoint_path + "/" + time_stamp + "/chkpt",
-                       global_step=i_step)
+            # Only print summary after some training has happened.
+            if i_step > 0:
+                if callback is not None:
+                    callback(i_step, metrics, results[:-2], hyper_params.train.checkpoint_path + "/" + time_stamp)
+                else:
+                    print("Iter: %d" % i_step)
+                summary = results[-1]
+                log_writer.add_summary(summary, i_step)
+                saver.save(session, hyper_params.train.checkpoint_path + "/" + time_stamp + "/chkpt",
+                           global_step=i_step)
+
             if enable_timing:
                 end = time.time()
                 print("Timing: %.3f ms per iteration" % ((end - last_printout) * 1000 / float(i_step - last_printout_iter)))
