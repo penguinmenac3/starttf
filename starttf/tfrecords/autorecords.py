@@ -15,35 +15,44 @@ def _bytes_feature(value):
 
 
 def _write_tf_record_pool_helper(args):
-    hyper_params, data, num_threads, i, record_filename, preprocess_feature, preprocess_label = args
+    hyper_params, data, num_threads, i, record_filename, preprocess_feature, preprocess_label, augment_data = args
     data_fn, data_params = data
     thread_name = "%s:thread_%d" % (record_filename, i)
-    _write_tf_record(hyper_params, data_fn(data_params, num_threads, i), record_filename, preprocess_feature, preprocess_label, thread_name=thread_name)
+    _write_tf_record(hyper_params, data_fn(data_params, num_threads, i), record_filename, preprocess_feature, preprocess_label, augment_data, thread_name=thread_name)
 
 
-def _write_tf_record(hyper_params, data, record_filename, preprocess_feature=None, preprocess_label=None, thread_name="thread"):
+def _write_tf_record(hyper_params, data, record_filename, preprocess_feature=None, preprocess_label=None, augment_data=None, thread_name="thread"):
     writer = tf.python_io.TFRecordWriter(record_filename)
 
     samples_written = 0
-    for feature, label in data:
-        if preprocess_feature is not None:
-            feature = preprocess_feature(hyper_params, feature)
-        if preprocess_label is not None:
-            label = preprocess_label(hyper_params, feature, label)
+    for orig_feature, orig_label in data:
+        for i in range(hyper_params.problem.augmentation.steps):
+            feature = orig_feature
+            label = orig_label
+            if augment_data is not None:
+                feature, label = augment_data(hyper_params, feature, label)
+            if preprocess_feature is not None:
+                feature = preprocess_feature(hyper_params, feature)
+                if feature is None:
+                    continue
+            if preprocess_label is not None:
+                label = preprocess_label(hyper_params, feature, label)
+                if label is None:
+                    continue
 
-        feature_dict = {}
+            feature_dict = {}
 
-        for k in feature.keys():
-            feature_dict['feature_' + k] = _bytes_feature(np.reshape(feature[k], (-1,)).tobytes())
-        for k in label.keys():
-            feature_dict['label_' + k] = _bytes_feature(np.reshape(label[k], (-1,)).tobytes())
+            for k in feature.keys():
+                feature_dict['feature_' + k] = _bytes_feature(np.reshape(feature[k], (-1,)).tobytes())
+            for k in label.keys():
+                feature_dict['label_' + k] = _bytes_feature(np.reshape(label[k], (-1,)).tobytes())
 
-        example = tf.train.Example(features=tf.train.Features(
-            feature=feature_dict))
-        writer.write(example.SerializeToString())
-        samples_written += 1
-        if samples_written % 10000 == 0:
-            print("Samples written by %s: %d." % (thread_name, samples_written))
+            example = tf.train.Example(features=tf.train.Features(
+                feature=feature_dict))
+            writer.write(example.SerializeToString())
+            samples_written += 1
+            if samples_written % 1000 == 0:
+                print("Samples written by %s: %d." % (thread_name, samples_written))
     print("Samples written by %s: %d." % (thread_name, samples_written))
     writer.close()
 
@@ -81,23 +90,29 @@ def write_data(hyper_params,
                params,
                num_threads,
                preprocess_feature=None,
-               preprocess_label=None):
+               preprocess_label=None,
+               augment_data=None):
     data_tmp_folder = "/".join(prefix.split("/")[:-1])
     if not os.path.exists(data_tmp_folder):
         os.makedirs(data_tmp_folder)
 
     args = [(hyper_params, (threadable_generator, params), num_threads, i, (prefix + "_%d.tfrecords") % i,
-                   preprocess_feature, preprocess_label) for i in range(num_threads)]
+                   preprocess_feature, preprocess_label, augment_data) for i in range(num_threads)]
 
     # Retrieve a single sample
     data_gen = threadable_generator(params)
-    sample_feature, sample_label = next(data_gen)
+    sample_label = None
+    sample_feature = None
+    while sample_label is None or sample_feature is None:
+        sample_feature, sample_label = next(data_gen)
 
-    # Preprocess samples, so that shapes and dtypes are correct.
-    if preprocess_feature is not None:
-        sample_feature = preprocess_feature(hyper_params, sample_feature)
-    if preprocess_label is not None:
-        sample_label = preprocess_label(hyper_params, sample_feature, sample_label)
+        # Preprocess samples, so that shapes and dtypes are correct.
+        if augment_data is not None:
+            sample_feature, sample_label = augment_data(hyper_params, sample_feature, sample_label)
+        if preprocess_feature is not None:
+            sample_feature = preprocess_feature(hyper_params, sample_feature)
+        if preprocess_label is not None:
+            sample_label = preprocess_label(hyper_params, sample_feature, sample_label)
 
     config = {"num_threads": num_threads,
               "features": sample_feature.keys(),
