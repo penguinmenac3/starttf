@@ -236,7 +236,9 @@ class Network(object):
             return fc
 
     @layer
-    def softmax(self, input, name):
+    def softmax(self, input, name, ignore_shape=False):
+        if ignore_shape:
+            return tf.nn.softmax(input, name=name)
         input_shape = map(lambda v: v.value, input.get_shape())
         if len(input_shape) > 2:
             # For certain models (like NiN), the singleton spatial dimensions
