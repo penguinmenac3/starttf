@@ -43,7 +43,7 @@ def resize_image_with_crop_or_pad(img, target_height, target_width):
     img = crop_center(img, min(max_h, h), min(max_w, w))
 
     # pad
-    padded_img = np.zeros(shape=(h, w, c))
+    padded_img = np.zeros(shape=(h, w, c), dtype=img.dtype)
     padded_img[:img.shape[0], :img.shape[1], :img.shape[2]] = img
 
     return padded_img
