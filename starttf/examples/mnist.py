@@ -13,11 +13,24 @@ from starttf.tfrecords.autorecords import auto_read_write_data, PHASE_TRAIN, PHA
 from starttf.models.model import train, export_graph
 from starttf.models.mnist import create_model
 
-from starttf.losses.mnist import create_loss
+from starttf.utils.misc import mode_to_str
 
 GENERATE_DATA = False
 TRAIN = tf.estimator.ModeKeys.TRAIN
 EVAL = tf.estimator.ModeKeys.EVAL
+
+
+def create_loss(model, labels, mode, hyper_params):
+    mode_name = mode_to_str(mode)
+    metrics = {}
+
+    # Add loss
+    labels = tf.reshape(labels["probs"], [-1, 10])
+    loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=model["logits"], labels=labels))
+    tf.summary.scalar(mode_name + '/loss', loss_op)
+    metrics[mode_name + '/loss'] = loss_op
+
+    return loss_op, metrics
 
 
 def generate_data_fn():
