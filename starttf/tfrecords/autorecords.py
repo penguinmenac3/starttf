@@ -114,9 +114,7 @@ def write_data(hyper_params,
         if preprocess_label is not None:
             sample_label = preprocess_label(hyper_params, sample_feature, sample_label)
 
-    config = {"num_threads": num_threads,
-              "features": sample_feature.keys(),
-              "labels": sample_label.keys()}
+    config = {"num_threads": num_threads}
     for k in sample_feature.keys():
         config["feature_" + k] = {"shape": sample_feature[k].shape, "dtype": sample_feature[k].dtype.name}
     for k in sample_label.keys():
