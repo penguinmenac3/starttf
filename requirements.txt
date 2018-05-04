@@ -1,4 +1,3 @@
-tensorflow-gpu>=1.4
 numpy
 scikit-image
 scikit-learn
