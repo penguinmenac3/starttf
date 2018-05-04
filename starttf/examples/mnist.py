@@ -10,7 +10,9 @@ from starttf.utils.session_config import get_default_config
 
 from starttf.tfrecords.autorecords import auto_read_write_data, PHASE_TRAIN, PHASE_VALIDATION
 
-from starttf.models.model import train, export_graph
+from starttf.estimators.scientific_estimator import train_and_evaluate
+
+from starttf.models.utils import export_graph
 from starttf.models.mnist import create_model
 
 from starttf.utils.misc import mode_to_str
@@ -62,10 +64,10 @@ def main():
     
     # Train model.
     with tf.Session(config=get_default_config()) as session:
-        checkpoint_path = train(hyper_params, session, train_op,
-                                metrics=[train_metrics, validation_metrics],
-                                callback=DefaultLossCallback().callback,
-                                enable_timing=True)
+        checkpoint_path = train_and_evaluate(hyper_params, session, train_op,
+                                             metrics=[train_metrics, validation_metrics],
+                                             callback=DefaultLossCallback().callback,
+                                             enable_timing=True)
 
     # Export the trained model
     export_graph(checkpoint_path=checkpoint_path, output_nodes=["MnistNetwork_1/probs"])

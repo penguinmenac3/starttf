@@ -12,7 +12,8 @@ from starttf.utils.misc import mode_to_str
 from starttf.tfrecords.autorecords import auto_read_write_data
 
 from starttf.models.gru_function_classifier import create_model
-from starttf.models.model import train, export_graph, load_graph
+from starttf.estimators.scientific_estimator import train_and_evaluate
+from starttf.models.utils import export_graph, load_graph
 
 GENERATE_DATA = False
 TRAIN = tf.estimator.ModeKeys.TRAIN
@@ -64,7 +65,7 @@ def main():
     train_model = create_model(train_features, TRAIN, hyper_params)
     train_loss, train_metrics = create_loss(train_model, train_labels, TRAIN, hyper_params)
     train_op = tf.train.RMSPropOptimizer(learning_rate=hyper_params.train.learning_rate,
-                                     decay=hyper_params.train.decay).minimize(train_loss)
+                                         decay=hyper_params.train.decay).minimize(train_loss)
 
     # Create a validation model.
     validation_model = create_model(validation_features, EVAL, hyper_params)
@@ -75,10 +76,10 @@ def main():
     
     # Train model.
     with tf.Session(config=get_default_config()) as session:
-        checkpoint_path = train(hyper_params, session, train_op,
-                                metrics=[train_metrics, validation_metrics],
-                                callback=DefaultLossCallback().callback,
-                                enable_timing=True)
+        checkpoint_path = train_and_evaluate(hyper_params, session, train_op,
+                                             metrics=[train_metrics, validation_metrics],
+                                             callback=DefaultLossCallback().callback,
+                                             enable_timing=True)
 
     # Export the trained model
     export_graph(checkpoint_path=checkpoint_path, output_nodes=["GruFunctionClassifier_2/probs"])
