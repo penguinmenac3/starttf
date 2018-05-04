@@ -1,7 +1,6 @@
-# Deep Learning - Starterpack [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+# starttf - Deeplearning Starterkit for Tensorflow [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-This repo aims to contain everything required to quickly develop a deep neural network with tensorflow or keras.
-It comes with several dataset loaders and network architectures.
+This repo aims to contain everything required to quickly develop a deep neural network with tensorflow.
 If I can find it the models will also contain pretrained weights.
 The idea is that if you use existing dataset loaders and networks and only modify them, you will automatically obey best practices and have super fast training speeds.
 
@@ -12,36 +11,28 @@ See section 'Simple to use tensorflow' at the end of this document.
 
 ## Install
 
-First clone the repository **recursively**!
-
-```bash
-git clone --recursive https://github.com/penguinmenac3/deeplearning-starterpack.git
-```
-
-Simply create a new python virtual environment (preferably python 3.x) and install the requirements listed in the [requirements.txt](requirements.txt).
 Properly install tensorflow-gpu please follow the [official instructions](https://www.tensorflow.org/install/) carefully.
 
+Then, simply pip install from the github repo.
+
+```bash
+pip install https://github.com/penguinmenac3/starttf/archive/master.zip
+```
 
 ## Running examples
 
-Either use an ide such as pycharm and set your working directory to the keras-starterpack folder.
-Or launch your code from the command line like the example bellow.
+You can launch your code from the command line like the example.
 
 ```bash
 # Activate your virtual environment (in my case venv)
 # Then do the following
-(venv) $ cd /PATH/TO/deeplearning-starterpack
 (venv) $ pyhon -m starttf.examples.mnist
 ```
 
 ## Datasets
 
-For dataset support I use my own dataset library including bindings to load many popular datasets in a unified format.
-
-You will have to clone [opendatalake](https://github.com/penguinmenac3/opendatalake) and add it to your PYTHONPATH.
-
-The dataset loader basically supports **classification**, **segmentation**, **regression** (including **2d- and 3d-detection**) and some visualization helpers.
-For details checkout the readme of the project [**here**](https://github.com/penguinmenac3/opendatalake/blob/master/README.md).
+For dataset support you can write your own generators or use opendatalake library including bindings to load many popular datasets in a unified format.
+For details checkout the readme of opendatalake [**here**](https://github.com/penguinmenac3/opendatalake/blob/master/README.md).
 
 ## Models
 
@@ -69,27 +60,6 @@ More non famous models by myself:
 2. [GRU Function Classifier](starttf/models/gru_function_classifier.py)
 3. CNN for LFW (Person Identification) [TODO]
 
-### Keras Models
-
-1. [Alexnet (single stream version)](startkeras/models/alexnet.py)
-2. [VGG 16](startkeras/models/vgg_16.py)
-3. [GoogLeNet (Inception v3)](startkeras/models/googlenet.py)
-4. Overfeat/Tensorbox [TODO]
-5. ResNet [TODO]
-6. [SegNet](startkeras/models/segnet.py)
-7. Mask RCNN [TODO]
-8. monoDepth [TODO]
-
-More non famous models by myself:
-
-1. [CNN for MNIST](startkeras/models/mnist_cnn.py)
-2. [CNN for Person Classification](startkeras/models/tinypersonnet.py)
-3. CNN for Person Identification [WIP]
-
-## Examples
-
-Some samples that should help getting into stuff.
-
 ### Tensorflow Examples
 
 1. [MNIST](starttf/examples/mnist.py)
@@ -100,28 +70,6 @@ Some samples that should help getting into stuff.
 6. Instance Masks [TODO]
 7. Reinforcement Learning [TODO]
 8. [GRU Function Classifier](starttf/examples/gru_function_classifier.py)
-
-### Keras Examples
-
-
-Notebooks:
-1. [MNIST Notebook](startkeras/examples/mnist.ipynb)
-
-Code:
-
-1. [MNIST](startkeras/examples/mnist.py)
-2. LFW [WIP]
-3. Imagenet (Baselines) [TODO]
-4. Bounding Box Regression [TODO]
-5. Segmentations [TODO]
-6. Instance Masks [TODO]
-7. Reinforcement Learning [TODO]
-
-On non publically availible data:
-(however can be used on your own data)
-
-1. [Simple Classification (Folder per Class)](startkeras/examples/tinypersonnet.py)
-
 
 ## Simple to use tensorflow
 
@@ -208,9 +156,7 @@ train_features, train_labels, validation_features, validation_labels = load_data
 Tensorboard integration is simple.
 You just have to define a summary (e.g. a summary scalar for the loss) and it gets added to the tensorboard.
 No worries when to summarize and how to call it and merging.
-Simply define your summary and the rest is handled by the meta model in the fit method.
-
-![Screenshot showing code to include tensorboard on the left and tensorboard on the right](images/tensorboard_integration.png)
+Simply define your summary and the rest is handled by the estimator.
 
 ### TF Estimator support
 
@@ -244,4 +190,4 @@ def my_model_fn(features, labels, mode, hyper_params):
 
 ### More details
 
-More details can be found in the tf_examples or tf_models. Mnist is a simple example for starters.
+More details can be found in starttf/examples or starttf/models. Mnist is a simple example for starters.
