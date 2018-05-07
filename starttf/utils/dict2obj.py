@@ -30,3 +30,6 @@ class Dict2Obj(object):
     def to_dict(self):
         return dict((key, value.to_dict()) if isinstance(value, Dict2Obj) else (key, value)
                     for (key, value) in self.__dict__.items())
+
+    def pretty_print(self):
+        print(json.dumps(self.to_dict(), indent=4, sort_keys=True))
