@@ -77,7 +77,7 @@ def train_and_evaluate(hyper_params, session, train_op, metrics=[], callback=Non
     return hyper_params.train.checkpoint_path + "/" + time_stamp
 
 
-def easy_train_and_evaluate(hyper_params, create_model, create_loss, init_model=None):
+def easy_train_and_evaluate(hyper_params, create_model, create_loss, init_model=None, inline_plotting=False):
     # Load training data
     print("Loading data")
     train_features, train_labels = read_data(os.path.join(hyper_params.train.tf_records_path, PHASE_TRAIN),
@@ -127,5 +127,5 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, init_model=
             init_model(hyper_params, train_model, session)
         train_and_evaluate(hyper_params, session, train_op,
                            metrics=[train_metrics, validation_metrics],
-                           callback=DefaultLossCallback().callback,
+                           callback=DefaultLossCallback(inline_plotting=inline_plotting).callback,
                            enable_timing=True)
