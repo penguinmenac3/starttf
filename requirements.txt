@@ -5,6 +5,7 @@ scipy
 matplotlib
 h5py
 pandas
+opencv-python
 
 # Dev/Deployment
 sphinx
