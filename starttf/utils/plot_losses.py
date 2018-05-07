@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import json
+from IPython.display import clear_output
 
 
 class DefaultLossCallback(object):
@@ -10,6 +12,8 @@ class DefaultLossCallback(object):
         self.inline_plotting = inline_plotting
 
     def callback(self, i_step, metrics, reports, model_path):
+        if self.inline_plotting:
+            clear_output()
         # Interpret report matching to the report defined in reports by create_model
         print("Iter: %d, Train loss: %.4f, Test loss: %.4f" % (i_step, reports[0], reports[1]))
         self.iter_list.append(i_step)
@@ -36,16 +40,34 @@ class DefaultLossCallback(object):
 
 
 def create_plot(title, model_path, data, inline_plotting=False):
-    if not inline_plotting and not os.path.exists(model_path + "/images"):
+    if not os.path.exists(model_path + "/images"):
         os.makedirs(model_path + "/images")
 
     plt.title(title)
     plt.xlabel("iter")
     plt.ylabel(title)
+    csv_dat = {}
     for date in data:
         label, x, y = date
         plt.plot(x, y, label=label)
+        csv_dat[label + "/x"] = x
+        csv_dat[label + "/y"] = y
     plt.legend()
+
+    with open(model_path + "/images/" + title + ".csv", "w") as f:
+        cols = csv_dat.keys()
+        n_cols = len(cols)
+        n_rows = max([len(csv_dat[cols[i]]) for i in range(n_cols)])
+
+        csv = ",".join(cols) + "\n"
+        for row in range(n_rows):
+            line = []
+            for col in range(n_cols):
+                line.append("{}".format(csv_dat[cols[col]][row]))
+            csv += ",".join(line) + "\n"
+
+        f.write(csv)
+
     if inline_plotting:
         plt.show()
     else:
