@@ -55,7 +55,7 @@ def create_plot(title, model_path, data, inline_plotting=False):
     plt.legend()
 
     with open(model_path + "/images/" + title + ".csv", "w") as f:
-        cols = csv_dat.keys()
+        cols = list(csv_dat.keys())
         n_cols = len(cols)
         n_rows = max([len(csv_dat[cols[i]]) for i in range(n_cols)])
 
