@@ -90,16 +90,37 @@ class Network(object):
         session: The current TensorFlow session
         ignore_missing: If true, serialized weights for missing layers are ignored.
         '''
-        data_dict = np.load(data_path).item()
-        for op_name in data_dict:
-            with tf.variable_scope(op_name, reuse=True):
-                for param_name, data in data_dict[op_name].iteritems():
+        if data_path.endswith(".npz"):
+            data_dict = np.load(data_path)
+            keys = sorted(data_dict.keys())
+            for i, k in enumerate(keys):
+                data = data_dict[k]
+                op_name = "_".join(k.split("_")[:-1])
+                param_name = "weights" if k.split("_")[-1] == "W" else "biases"
+                with tf.variable_scope(op_name, reuse=True):
                     try:
                         var = tf.get_variable(param_name)
                         session.run(var.assign(data))
+                        print("Loaded: {} {}".format(op_name, param_name))
                     except ValueError:
+                        print("Failed Loading: {} {}".format(op_name, param_name))
                         if not ignore_missing:
                             raise
+        elif data_path.endswith(".npy"):
+            data_dict = np.load(data_path).item()
+            for op_name in data_dict:
+                with tf.variable_scope(op_name, reuse=True):
+                    for param_name, data in data_dict[op_name].iteritems():
+                        try:
+                            var = tf.get_variable(param_name)
+                            session.run(var.assign(data))
+                            print("Loaded: {} {}".format(op_name, param_name))
+                        except ValueError:
+                            print("Failed Loading: {} {}".format(op_name, param_name))
+                            if not ignore_missing:
+                                raise
+        else:
+            raise RuntimeError("Invalid file type.")
 
     def feed(self, *args):
         '''Set the input(s) for the next operation by replacing the terminal nodes.
