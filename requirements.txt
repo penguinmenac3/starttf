@@ -1,4 +1,3 @@
-tensorflow-gpu
 numpy
 scikit-image
 scikit-learn
@@ -7,7 +6,9 @@ matplotlib
 h5py
 pandas
 
-# To use keras models
-keras
-pydot-ng
-graphviz
+# Dev/Deployment
+sphinx
+sphinx_rtd_theme
+nose
+coverage
+pypi-publisher
