@@ -79,24 +79,21 @@ More non famous models by myself:
 There are pre-implemented models which can be glued together and trained with just a few lines.
 
 ```python
-# [...]
-# Create a training model.
-print("Creating Model")
-train_model = create_model(train_features, TRAIN, hyper_params)
-train_loss, train_metrics = create_loss(train_model, train_labels, TRAIN, hyper_params)
-train_op = tf.train.RMSPropOptimizer(learning_rate=hyper_params.train.learning_rate,
-                                     decay=hyper_params.train.decay).minimize(train_loss)
+# Import helpers
+from starttf.estimators.scientific_estimator import easy_train_and_evaluate
+from starttf.utils.hyperparams import load_params
 
-# Create a validation model.
-validation_model = create_model(validation_features, EVAL, hyper_params)
-_, validation_metrics = create_loss(validation_model, validation_labels, EVAL, hyper_params)
-    
-# Train model.
-with tf.Session(config=get_default_config()) as session:
-    checkpoint_path = train(hyper_params, session, train_op,
-                            metrics=[train_metrics, validation_metrics],
-                            callback=DefaultLossCallback().callback,
-                            enable_timing=True)
+# Import a model
+from starttf.models.mnist import create_model
+
+# Import your loss
+from my_loss_function import create_loss
+
+# Load params
+hyper_params = load_params("starttf/examples/mnist.json")
+
+# Train model
+easy_train_and_evaluate(hyper_params, mnist_model, create_loss)
 ```
 
 ### Quick Model Definition
@@ -186,6 +183,32 @@ def my_model_fn(features, labels, mode, hyper_params):
         return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
 
     raise RuntimeError("Unexpected mode.")
+```
+
+### Don't like estimators? No problem
+
+If you do not like estimators, you can use this pattern to have more control.
+This enables you to train and evaluate simultaneously.
+
+```python
+# [...]
+# Create a training model.
+print("Creating Model")
+train_model = create_model(train_features, TRAIN, hyper_params)
+train_loss, train_metrics = create_loss(train_model, train_labels, TRAIN, hyper_params)
+train_op = tf.train.RMSPropOptimizer(learning_rate=hyper_params.train.learning_rate,
+                                     decay=hyper_params.train.decay).minimize(train_loss)
+
+# Create a validation model.
+validation_model = create_model(validation_features, EVAL, hyper_params)
+_, validation_metrics = create_loss(validation_model, validation_labels, EVAL, hyper_params)
+    
+# Train model.
+with tf.Session(config=get_default_config()) as session:
+    checkpoint_path = train(hyper_params, session, train_op,
+                            metrics=[train_metrics, validation_metrics],
+                            callback=DefaultLossCallback().callback,
+                            enable_timing=True)
 ```
 
 ### More details
