@@ -9,6 +9,16 @@ except ModuleNotFoundError:
 
 class DefaultLossCallback(object):
     def __init__(self, inline_plotting=False):
+        """
+        A metric plotter and saver.
+
+        Define your metrics in your loss by using the mode_str + "/*" pattern to add you metrics to the metrics dict
+        and this callback will be capable auf automatically plotting them and saving them into a csv file.
+
+        The metrics files can be found in your checkpoint folder.
+
+        :param inline_plotting: This parameter is for jupyter notebook users. This will plot the loss not in a file but inside the notebook.
+        """
         self.iter_list = []
         self.report_storage = []
         self.inline_plotting = inline_plotting and not NO_IPYTHON
