@@ -1,0 +1,28 @@
+{
+    "problem": {
+        "data_path": "data/mnist",
+        "number_of_categories": 10,
+        "augmentation": {
+            "steps": 1
+        }
+    },
+    "train": {
+        "learning_rate": {
+            "type": "const",
+            "start_value": 0.001
+        },
+        "optimizer": {
+            "type": "adam"
+        },
+        "batch_size": 1024,
+        "validation_batch_size": 1024,
+        "iters": 10000,
+        "summary_iters": 100,
+        "checkpoint_path": "checkpoints/mnist",
+        "tf_records_path": "data/.records/mnist"
+    },
+    "arch": {
+        "network_name": "MnistNetwork",
+        "dropout_rate": 0.5
+    }
+}
