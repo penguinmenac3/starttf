@@ -55,14 +55,16 @@ Just check the comment at the top of their source files.
 Every model returns a dictionary containing output tensors.
 
 1. [Alexnet (single stream version)](starttf/models/alexnet.py)
-3. [VGG 16](starttf/models/vgg16.py)
-4. [VGG 16 pretrained](starttf/models/vgg16_encoder.py)
-3. GoogLeNet (Inception v3) [TODO]
-4. Overfeat/Tensorbox [TODO]
-5. ResNet [TODO]
-6. SegNet [TODO]
-7. Mask RCNN [TODO]
-8. monoDepth [TODO]
+2. [VGG 16](starttf/models/vgg16.py)
+3. [VGG 16 pretrained](starttf/models/vgg16_encoder.py)
+4. [GoogLeNet (Inception v3)](starttf/models/inception_v3.py)
+5. [GoogLeNet Encoder (Inception v3)](starttf/models/inception_v3_encoder.py)
+6. Overfeat/Tensorbox [TODO]
+7. ResNet [TODO]
+8. SegNet [TODO]
+9. Mask RCNN [TODO]
+10. monoDepth [TODO]
+11. [TF Hub Wrapper](starttf/models/tf_hub_wrapper.py)
 
 More non famous models by myself:
 

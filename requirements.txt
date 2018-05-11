@@ -6,6 +6,7 @@ matplotlib
 h5py
 pandas
 opencv-python
+tensorflow-hub
 
 # Dev/Deployment
 sphinx
