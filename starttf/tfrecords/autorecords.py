@@ -92,6 +92,23 @@ def write_data(hyper_params,
                preprocess_feature=None,
                preprocess_label=None,
                augment_data=None):
+    """
+    Write a tf record containing a feature dict and a label dict.
+
+    :param hyper_params: The hyper parameters required for writing {"problem": {"augmentation": {"steps": Int}}}
+    :param prefix: The path prefix where to store your data. Recomennded is something like "data/.records/mnist/train" and "data/.records/mnist/validation"
+    :param threadable_generator: A generator that supports a nicely threadable api.
+        def gen(params, stride, offset, infinite)
+        and returns a feature dict and a label dict containing a single example.
+    :param params: The parameters for the threadable generator.
+    :param num_threads: The number of threads. (Recommended: 4 for training and 2 for validation seems to works nice)
+    :param preprocess_feature: A function that transforms the features from the raw dataset generator into something that your network could use.
+        e.g. changing the encoding. (hyper_params, feature dict -> feature dict)
+    :param preprocess_label: A function that transforms the labels from the raw dataset generator into something that your network could use.
+        e.g. one hot encoding. (hyper_params, feature dict, label dict -> label dict)
+    :param augment_data: A method that augments your data. eg random crop, scale, etc. (hyper_params, feature dict, label dict -> feature dict, label dict)
+    :return:
+    """
     prefix = prefix.replace("\\", "/")
     data_tmp_folder = "/".join(prefix.split("/")[:-1])
     if not os.path.exists(data_tmp_folder):
@@ -129,6 +146,12 @@ def write_data(hyper_params,
 
 
 def read_data(prefix, batch_size):
+    """
+    Loads a tf record as tensors you can use.
+    :param prefix: The path prefix as defined in the write data method.
+    :param batch_size: The batch size you want for the tensors.
+    :return: A feature tensor dict and a label tensor dict.
+    """
     prefix = prefix.replace("\\", "/")
     folder = "/".join(prefix.split("/")[:-1])
     phase = prefix.split("/")[-1]
@@ -163,7 +186,11 @@ def read_data(prefix, batch_size):
     return feature_batch, label_batch
 
 
+@DeprecationWarning
 def auto_read_write_data(hyper_params, generate_data_fn, data_tmp_folder, force_generate_data=False, preprocess_feature=None, preprocess_label=None):
+    """
+    Deprecated: Do not use!
+    """
     if force_generate_data or not os.path.exists(data_tmp_folder):
         if not os.path.exists(data_tmp_folder):
             os.makedirs(data_tmp_folder)
