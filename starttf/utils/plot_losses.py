@@ -1,15 +1,17 @@
 import matplotlib.pyplot as plt
-import numpy as np
 import os
-import json
-from IPython.display import clear_output
+try:
+    from IPython.display import clear_output
+    NO_IPYTHON = False
+except ModuleNotFoundError:
+    NO_IPYTHON = True
 
 
 class DefaultLossCallback(object):
     def __init__(self, inline_plotting=False):
         self.iter_list = []
         self.report_storage = []
-        self.inline_plotting = inline_plotting
+        self.inline_plotting = inline_plotting and not NO_IPYTHON
 
     def callback(self, i_step, metrics, reports, model_path):
         if self.inline_plotting:
