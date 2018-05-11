@@ -128,6 +128,7 @@ def write_data(hyper_params,
 
 
 def read_data(prefix, batch_size):
+    prefix = prefix.replace("\\", "/")
     folder = "/".join(prefix.split("/")[:-1])
     phase = prefix.split("/")[-1]
     config = json.load(open(prefix + '_config.json'))
