@@ -92,6 +92,7 @@ def write_data(hyper_params,
                preprocess_feature=None,
                preprocess_label=None,
                augment_data=None):
+    prefix = prefix.replace("\\", "/")
     data_tmp_folder = "/".join(prefix.split("/")[:-1])
     if not os.path.exists(data_tmp_folder):
         os.makedirs(data_tmp_folder)
