@@ -15,6 +15,19 @@ EVAL = tf.estimator.ModeKeys.EVAL
 
 
 def train_and_evaluate(hyper_params, session, train_op, metrics=[], callback=None, enable_timing=False):
+    """
+    Not recommended.
+
+    Use easy_train_and_evaluate instead.
+
+    :param hyper_params: Hyper params object.
+    :param session: A session.
+    :param train_op: The operation that trains the network.
+    :param metrics: Your training and evaluation metrics.
+    :param callback: Callbacks that should be called and fed your metrics.
+    :param enable_timing: If you want to time execution to know the speed.
+    :return:
+    """
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
 
     # Collect metrics operations.
@@ -78,6 +91,37 @@ def train_and_evaluate(hyper_params, session, train_op, metrics=[], callback=Non
 
 
 def easy_train_and_evaluate(hyper_params, create_model, create_loss, init_model=None, inline_plotting=False):
+    """
+    Train and evaluate your model without any boilerplate code.
+
+    1) Write your data using the starttf.tfrecords.autorecords.write_data method.
+    2) Create your hyper parameter file containing all required fields and then load it using
+        starttf.utils.hyper_params.load_params method.
+        Minimal Sample Hyperparams File:
+        {"train": {
+            "learning_rate": {
+                "type": "const",
+                "start_value": 0.001
+            },
+            "optimizer": {
+                "type": "adam"
+            },
+            "batch_size": 1024,
+            "validation_batch_size": 1024,
+            "iters": 10000,
+            "summary_iters": 100,
+            "checkpoint_path": "checkpoints/mnist",
+            "tf_records_path": "data/.records/mnist"
+            }
+        }
+    3) Pass everything required to this method and that's it.
+    :param hyper_params: The hyper parameters obejct loaded via starttf.utils.hyper_params.load_params
+    :param create_model: A create_model function like that in starttf.models.mnist.
+    :param create_loss: A create_loss function like that in starttf.examples.mnist.loss.
+    :param init_model: A init_model function, if your model gets initialized with pretrained weights (e.g. starttf.models.vgg16_encoder)
+    :param inline_plotting: When you are using jupyter notebooks you can tell it to plot the loss directly inside the notebook.
+    :return:
+    """
     # Load training data
     print("Loading data")
     train_features, train_labels = read_data(os.path.join(hyper_params.train.tf_records_path, PHASE_TRAIN),
