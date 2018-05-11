@@ -1,0 +1,34 @@
+{
+    "problem": {
+        "data_path": "data/gru_function_classifier",
+        "training_examples": 10000,
+        "validation_examples": 1000,
+        "augmentation": {
+            "steps": 1
+        }
+    },
+    "train": {
+        "learning_rate": {
+            "type": "const",
+            "start_value": 0.001
+        },
+        "optimizer": {
+            "type": "adam"
+        },
+        "batch_size": 200,
+        "validation_batch_size": 200,
+        "iters": 10000,
+        "summary_iters": 100,
+        "checkpoint_path": "checkpoints/gru_function_classifier",
+        "tf_records_path": "data/.records/gru_function_classifier"
+    },
+    "arch": {
+        "network_name": "GruFunctionClassifier",
+        "sequence_length": 100,
+        "input_dimension": 1,
+        "output_dimension": 2,
+        "hidden_layer_size": 30,
+        "hidden_layer_depth": 2,
+        "pkeep": 0.5
+    }
+}

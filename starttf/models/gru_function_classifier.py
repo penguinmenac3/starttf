@@ -18,7 +18,7 @@ def create_model(input_tensor, mode, hyper_params):
             batch_size = 1
 
         # Define inputs
-        input_tensor = tf.reshape(input_tensor, (batch_size, hyper_params.arch.sequence_length, 1))
+        input_tensor = tf.reshape(input_tensor["feature"], (batch_size, hyper_params.arch.sequence_length, 1))
         Hin = tf.zeros([batch_size, hyper_params.arch.hidden_layer_size * hyper_params.arch.hidden_layer_depth], tf.float32, name="Hin")
 
         # Define the actual cells
