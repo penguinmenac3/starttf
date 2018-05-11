@@ -19,6 +19,14 @@ Then, simply pip install from the github repo.
 pip install https://github.com/penguinmenac3/starttf/archive/master.zip
 ```
 
+### Optional Recommendations
+
+For simple dataset access install opendatalake.
+
+```bash
+pip install https://github.com/penguinmenac3/opendatalake/archive/master.zip
+```
+
 ## Running examples
 
 You can launch your code from the command line like the example.
@@ -26,7 +34,8 @@ You can launch your code from the command line like the example.
 ```bash
 # Activate your virtual environment (in my case venv)
 # Then do the following
-(venv) $ pyhon -m starttf.examples.mnist
+(venv) $ pyhon -m starttf.examples.mnist.prepare_training
+(venv) $ pyhon -m starttf.examples.mnist.train
 ```
 
 ## Datasets
@@ -46,7 +55,8 @@ Just check the comment at the top of their source files.
 Every model returns a dictionary containing output tensors.
 
 1. [Alexnet (single stream version)](starttf/models/alexnet.py)
-2. [VGG 16](starttf/models/vgg16.py)
+3. [VGG 16](starttf/models/vgg16.py)
+4. [VGG 16 pretrained](starttf/models/vgg16_encoder.py)
 3. GoogLeNet (Inception v3) [TODO]
 4. Overfeat/Tensorbox [TODO]
 5. ResNet [TODO]
@@ -62,41 +72,45 @@ More non famous models by myself:
 
 ### Tensorflow Examples
 
-1. [MNIST](starttf/examples/mnist.py)
+1. [MNIST](starttf/examples/mnist)
 2. LFW [TODO]
 3. Imagenet (Baselines) [TODO]
 4. Bounding Box Regression [TODO]
 5. Segmentations [TODO]
 6. Instance Masks [TODO]
 7. Reinforcement Learning [TODO]
-8. [GRU Function Classifier](starttf/examples/gru_function_classifier.py)
+8. [GRU Function Classifier](starttf/examples/gru_function_classifier)
 
 ## Simple to use tensorflow
 
 
-### Predefined Models and losses
+### Simple Training (No Boilerplate)
 
 There are pre-implemented models which can be glued together and trained with just a few lines.
+However, before training you will have to create tf-records as shown in the section *Simple TF Record Creation*.
+This is actually a full main file.
 
 ```python
 # Import helpers
 from starttf.estimators.scientific_estimator import easy_train_and_evaluate
 from starttf.utils.hyperparams import load_params
 
-# Import a model
+# Import a/your model (here one for mnist)
 from starttf.models.mnist import create_model
 
-# Import your loss
-from my_loss_function import create_loss
+# Import your loss (here an example)
+from starttf.examples.mnist.loss import create_loss
 
-# Load params
-hyper_params = load_params("starttf/examples/mnist.json")
+# Load params (here for mnist)
+hyper_params = load_params("starttf/examples/mnist/hyper_params.json")
 
 # Train model
 easy_train_and_evaluate(hyper_params, mnist_model, create_loss)
 ```
 
 ### Quick Model Definition
+
+Full sample [here](https://github.com/penguinmenac3/starttf/blob/master/starttf/models/mnist.py).
 
 Simply implement a create_model function.
 This model is only a feed forward model.
@@ -119,6 +133,8 @@ def create_model(input_tensor, mode, hyper_params):
 
 ### Quick Loss Definition
 
+Full sample [here](https://github.com/penguinmenac3/starttf/blob/master/starttf/examples/mnist/loss.py).
+
 ```python
 def create_loss(model, labels, mode, hyper_params):
     mode_name = mode_to_str(mode)
@@ -133,19 +149,29 @@ def create_loss(model, labels, mode, hyper_params):
     return loss_op, metrics
 ```
 
-### TFRecord Integration
+### Simple TF Record Creation
+
+Full sample [here](https://github.com/penguinmenac3/starttf/blob/master/starttf/examples/mnist/prepare_training.py).
 
 Fast training speed can be achieved by using tf records.
 Actually the api only supports using tf records, to enforce usage for optimal performance.
+However, usually tf records are a hastle to use the write_data method makes it simple.
 
 ```python
-def generate_data_fn():
-    base_dir = "data/mnist"
-    train_data = mnist(base_dir=base_dir, phase=PHASE_TRAIN)
-    validation_data = mnist(base_dir=base_dir, phase=PHASE_VALIDATION)
-    return train_data, validation_data
+# Load the hyper parameters.
+hyper_params = load_params("starttf/examples/mnist/hyper_params.json")
 
-train_features, train_labels, validation_features, validation_labels = load_data(hyper_params, generate_data_fn, data_tmp_folder)
+# Get a generator and its parameters
+train_gen, train_gen_params = mnist(base_dir=hyper_params.problem.data_path, phase="train")
+validation_gen, validation_gen_params = mnist(base_dir=hyper_params.problem.data_path, phase="validation")
+
+# Create the paths where to write the records from the hyper parameter file.
+train_record_path = os.path.join(hyper_params.train.tf_records_path, "train")
+validation_record_path = os.path.join(hyper_params.train.tf_records_path, "validation")
+
+# Write the data
+write_data(hyper_params, train_record_path, train_gen, train_gen_params, 4)
+write_data(hyper_params, validation_record_path, validation_gen, validation_gen_params, 2)
 ```
 
 ### Tensorboard Integration
@@ -155,7 +181,7 @@ You just have to define a summary (e.g. a summary scalar for the loss) and it ge
 No worries when to summarize and how to call it and merging.
 Simply define your summary and the rest is handled by the estimator.
 
-### TF Estimator support
+### TF Estimator Support (Not Recommended)
 
 Model and loss can be easily glued together in a model function and used with tf estimator.
 `mode` is a `tf.estimator.ModeKeys` to be Estimator compatible.
@@ -183,32 +209,6 @@ def my_model_fn(features, labels, mode, hyper_params):
         return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
 
     raise RuntimeError("Unexpected mode.")
-```
-
-### Don't like estimators? No problem
-
-If you do not like estimators, you can use this pattern to have more control.
-This enables you to train and evaluate simultaneously.
-
-```python
-# [...]
-# Create a training model.
-print("Creating Model")
-train_model = create_model(train_features, TRAIN, hyper_params)
-train_loss, train_metrics = create_loss(train_model, train_labels, TRAIN, hyper_params)
-train_op = tf.train.RMSPropOptimizer(learning_rate=hyper_params.train.learning_rate,
-                                     decay=hyper_params.train.decay).minimize(train_loss)
-
-# Create a validation model.
-validation_model = create_model(validation_features, EVAL, hyper_params)
-_, validation_metrics = create_loss(validation_model, validation_labels, EVAL, hyper_params)
-    
-# Train model.
-with tf.Session(config=get_default_config()) as session:
-    checkpoint_path = train(hyper_params, session, train_op,
-                            metrics=[train_metrics, validation_metrics],
-                            callback=DefaultLossCallback().callback,
-                            enable_timing=True)
 ```
 
 ### More details
