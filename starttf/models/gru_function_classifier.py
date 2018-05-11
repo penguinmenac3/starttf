@@ -6,6 +6,15 @@ from tensorflow.contrib import rnn
 
 
 def create_model(input_tensor, mode, hyper_params):
+    """
+    Creates a function classifier model using a gru.
+
+    :param input_tensor: A dictionary containing all input tensors.
+    :param mode: If the network is training or evaluating (tf.estimator.ModeKeys)
+    :param hyper_params: The hyper parameters object containing {"arch": {"pkeep": Float, "sequence_length": Int,
+        "hidden_layer_depth": Int, "hidden_layer_size": Int, "output_dimension": Int}}
+    :return: The model as a dictionary of output tensors.
+    """
     outputs = {}
     with tf.variable_scope('GruFunctionClassifier') as scope:
         if mode == tf.estimator.ModeKeys.EVAL or mode == tf.estimator.ModeKeys.PREDICT:

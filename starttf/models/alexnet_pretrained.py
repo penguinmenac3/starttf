@@ -34,6 +34,21 @@ def conv(input, kernel, biases, k_h, k_w, c_o, s_h, s_w,  padding="VALID", group
 
 
 def create_model(input_tensor, mode, hyper_params):
+    """
+    An alexnet network which can load caffe converted weights.
+
+    This model is just modified by the original authors are Michael Guerzhoy and Davi Frossard, 2016
+
+    Either convert them yourself or download them from a third party.
+
+    Convert weights using: https://github.com/ethereon/caffe-tensorflow
+    Or download weights: http://www.cs.toronto.edu/~guerzhoy/tf_alexnet/
+
+    :param input_tensor: The input tensor dict containing a "image" rgb tensor.
+    :param mode: Execution mode as a tf.estimator.ModeKeys
+    :param hyper_params: The hyper param file.
+    :return: A dictionary containing all output tensors.
+    """
     weight_file = hyper_params.arch.weight_file
     #net_data = np.load(open(weight_file, "rb"), encoding="latin1").item()
     net_data = np.load(weight_file).item()
@@ -47,7 +62,7 @@ def create_model(input_tensor, mode, hyper_params):
         k_h = 11; k_w = 11; c_o = 96; s_h = 4; s_w = 4
         conv1W = tf.Variable(net_data["conv1"][0], name="conv1W")
         conv1b = tf.Variable(net_data["conv1"][1], name="conv1b")
-        conv1_in = conv(input_tensor, conv1W, conv1b, k_h, k_w, c_o, s_h, s_w, padding="SAME", group=1)
+        conv1_in = conv(input_tensor["image"], conv1W, conv1b, k_h, k_w, c_o, s_h, s_w, padding="SAME", group=1)
         conv1 = tf.nn.relu(conv1_in, name="conv1")
 
         #lrn1

@@ -10,8 +10,15 @@ trunc_normal = lambda stddev: init_ops.truncated_normal_initializer(0.0, stddev)
 
 
 def create_model(input_tensor, mode, hyper_params):
+    """
+    An alexnet network.
+
+    :param input_tensor: The input tensor dict containing a "image" rgb tensor.
+    :param mode: Execution mode as a tf.estimator.ModeKeys
+    :param hyper_params: The hyper param file.
+    :return: A dictionary containing all output tensors.
+    """
     model = {}
-    l2_weight = 0.0
 
     spatial_squeeze = False
     dropout_keep_prob = 0.5

@@ -36,7 +36,7 @@ def create_model(input_tensor, mode, hyper_params):
     :param input_tensor: The input tensor dict containing a "image" rgb tensor.
     :param mode: Execution mode as a tf.estimator.ModeKeys
     :param hyper_params: The hyper param file. "vgg16" : {"encoder_only": Boolean}
-    :return:
+    :return: A dictionary containing all output tensors.
     """
     model = {}
     with tf.variable_scope('vgg16') as scope:

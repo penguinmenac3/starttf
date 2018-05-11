@@ -2,6 +2,12 @@ import tensorflow as tf
 
 
 def export_graph(checkpoint_path, output_nodes):
+    """
+    Export a graph stored in a checkpoint as a *.pb file.
+    :param checkpoint_path: The checkpoint path which should be frozen.
+    :param output_nodes: The output nodes you care about as a list of strings (their names).
+    :return:
+    """
     if not tf.gfile.Exists(checkpoint_path):
         raise AssertionError(
             "Export directory doesn't exists. Please specify an export "
@@ -45,6 +51,14 @@ def export_graph(checkpoint_path, output_nodes):
 
 
 def load_graph(frozen_graph_filename, input_shape, namespace_prefix="", old_input=None):
+    """
+    Loads a frozen graph from a *.pb file.
+    :param frozen_graph_filename: The file which graph to load.
+    :param input_shape: The shape of the new input you want.
+    :param namespace_prefix: A namespace for your graph to live in. This is useful when having multiple models.
+    :param old_input: The name of the old input tensor you want to replace.
+    :return: The graph that can now be passed to a session when creating it.
+    """
     # Load graph def from protobuff and import the definition
     with tf.gfile.GFile(frozen_graph_filename, "rb") as f:
         graph_def = tf.GraphDef()

@@ -34,6 +34,19 @@ class Vgg16Encoder(Network):
 
 
 def create_model(input_tensor, mode, hyper_params):
+    """
+    A vgg16 encoder network taken which can load caffe converted weights.
+
+    Either convert them yourself or download them from a third party.
+
+    Convert weights using: https://github.com/ethereon/caffe-tensorflow
+    Or download weights: https://www.cs.toronto.edu/~frossard/vgg16/vgg16_weights.npz
+
+    :param input_tensor: The input tensor dict containing a "image" rgb tensor.
+    :param mode: Execution mode as a tf.estimator.ModeKeys
+    :param hyper_params: The hyper param file. "vgg16" : {"encoder_only": Boolean}
+    :return: A dictionary containing all output tensors.
+    """
     with tf.variable_scope("vgg16") as scope:
         if mode == tf.estimator.ModeKeys.EVAL:
             scope.reuse_variables()
@@ -51,6 +64,14 @@ def create_model(input_tensor, mode, hyper_params):
 
 
 def init_model(hyper_params, model, session):
+    """
+    Load the pretrained weights for the model.
+
+    :param hyper_params: The hyper param file. "vgg16" : {"weight_file": "/path/to/weight_file"}
+    :param model: The vgg 16 model created by this packages create_model.
+    :param session: The tensorflow session.
+    :return:
+    """
     if hyper_params.vgg16.weight_file:
         print("Loading vgg16 weights: %s" % hyper_params.vgg16.weight_file)
         with tf.variable_scope("vgg16") as scope:
