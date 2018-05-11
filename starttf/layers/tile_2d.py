@@ -1,6 +1,17 @@
 import tensorflow as tf
 
+
 def tile_2d(input, k_x, k_y, name, reorder_required=True):
+    """
+    A tiling layer like introduced in overfeat and huval papers.
+    :param input: Your input tensor.
+    :param k_x: The tiling factor in x direction.
+    :param k_y: The tiling factor in y direction.
+    :param name: The name of the layer.
+    :param reorder_required: To implement an exact huval tiling you need reordering.
+      However not using it is more efficient and when training from scratch setting this to false is highly recommended.
+    :return: The output tensor.
+    """
     size = input.get_shape().as_list()
     c, h, w = size[3], size[1], size[2]
     batch_size = size[0]
