@@ -16,7 +16,7 @@ Properly install tensorflow-gpu please follow the [official instructions](https:
 Then, simply pip install from the github repo.
 
 ```bash
-pip install https://github.com/penguinmenac3/starttf/archive/master.zip
+pip install starttf
 ```
 
 ### Optional Recommendations
@@ -24,7 +24,7 @@ pip install https://github.com/penguinmenac3/starttf/archive/master.zip
 For simple dataset access install opendatalake.
 
 ```bash
-pip install https://github.com/penguinmenac3/opendatalake/archive/master.zip
+pip install opendatalake
 ```
 
 ## Running examples
