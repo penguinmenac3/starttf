@@ -122,13 +122,8 @@ The model function returns a dictionary containing all layers that should be acc
 ```python
 def create_model(input_tensor, mode, hyper_params):
     model = {}
-    l2_weight = 0.0
     with tf.variable_scope('MnistNetwork') as scope:
-        if mode == tf.estimator.ModeKeys.EVAL:
-            scope.reuse_variables()
-
-        # TODO Your model should go here
-        model["logits"] = input_tensor
+        model["logits"] = input_tensor  # TODO
         model["probs"] = tf.nn.softmax(logits=model["logits"], name="probs")
     return model
 ```
