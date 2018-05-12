@@ -121,20 +121,26 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, init_model=
     estimator_spec = create_tf_estimator_spec(chkpt_path, create_model, create_loss)
 
     # Train model.
-    distribution = None
-    if "distributed" in hyper_params.train.__dict__ and hyper_params.train.distributed:
-        distribution = tf.contrib.distribute.MirroredStrategy()
 
     warm_start_dir = None
     if "warm_start_checkpoint" in hyper_params.train.__dict__:
         warm_start_dir = hyper_params.train.warm_start_checkpoint
 
-    config = tf.estimator.RunConfig(model_dir=chkpt_path,
-                                    save_summary_steps=hyper_params.train.summary_steps,
-                                    train_distribute=distribution,
-                                    save_checkpoints_steps=hyper_params.train.save_checkpoint_steps,
-                                    keep_checkpoint_max=hyper_params.train.keep_checkpoint_max,
-                                    keep_checkpoint_every_n_hours=1)
+    config = None
+    if "distributed" in hyper_params.train.__dict__ and hyper_params.train.distributed:
+        distribution = tf.contrib.distribute.MirroredStrategy()
+        config = tf.estimator.RunConfig(model_dir=chkpt_path,
+                                        save_summary_steps=hyper_params.train.summary_steps,
+                                        train_distribute=distribution,
+                                        save_checkpoints_steps=hyper_params.train.save_checkpoint_steps,
+                                        keep_checkpoint_max=hyper_params.train.keep_checkpoint_max,
+                                        keep_checkpoint_every_n_hours=1)
+    else:
+        config = tf.estimator.RunConfig(model_dir=chkpt_path,
+                                        save_summary_steps=hyper_params.train.summary_steps,
+                                        save_checkpoints_steps=hyper_params.train.save_checkpoint_steps,
+                                        keep_checkpoint_max=hyper_params.train.keep_checkpoint_max,
+                                        keep_checkpoint_every_n_hours=1)
     estimator = tf.estimator.Estimator(estimator_spec,
                                        config=config,
                                        warm_start_from=warm_start_dir,

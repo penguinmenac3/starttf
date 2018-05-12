@@ -9,7 +9,8 @@ def create_loss(model, labels, mode, hyper_params):
     :param labels: A dictionary containing all label tensors.
     :param mode: tf.estimators.ModeKeys defining if you are in eval or training mode.
     :param hyper_params: A hyper parameters object.
-    :return: A loss operation (tensor) and all the metrics(tensor dict) that should be logged for debugging.
+    :return: All the losses (tensor dict, "loss" is the loss that is used for minimization)
+            and all the metrics(tensor dict) that should be logged for debugging.
     """
     metrics = {}
     losses = {}
