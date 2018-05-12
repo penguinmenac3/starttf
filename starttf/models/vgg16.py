@@ -40,9 +40,6 @@ def create_model(input_tensor, mode, hyper_params):
     """
     model = {}
     with tf.variable_scope('vgg16') as scope:
-        if mode == tf.estimator.ModeKeys.EVAL:
-            scope.reuse_variables()
-
         net = tf.cast(input_tensor["image"], dtype=tf.float32, name="input/cast")
         model["image"] = net
         mean = tf.constant([123.68, 116.779, 103.939], dtype=tf.float32, shape=[1, 1, 1, 3], name='img_mean')

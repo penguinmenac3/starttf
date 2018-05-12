@@ -12,9 +12,6 @@ def create_model(input_tensor, mode, hyper_params):
     """
     model = {}
     with tf.variable_scope('tf_hub_wrapper') as scope:
-        if mode == tf.estimator.ModeKeys.EVAL:
-            scope.reuse_variables()
-
         module = tf.contrib.hub.Module(hyper_params.tf_hub_wrapper.model_url, trainable=hyper_params.tf_hub_wrapper.trainable)
         model["output"] = module(input_tensor["image"] / 255.0)
     return model

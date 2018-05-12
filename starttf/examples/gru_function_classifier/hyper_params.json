@@ -2,10 +2,7 @@
     "problem": {
         "data_path": "data/gru_function_classifier",
         "training_examples": 10000,
-        "validation_examples": 1000,
-        "augmentation": {
-            "steps": 1
-        }
+        "validation_examples": 1000
     },
     "train": {
         "learning_rate": {
@@ -17,8 +14,10 @@
         },
         "batch_size": 200,
         "validation_batch_size": 200,
-        "iters": 10000,
-        "summary_iters": 100,
+        "steps": 20000,
+        "summary_steps": 100,
+        "save_checkpoint_steps": 200,
+        "keep_checkpoint_max": 200,
         "checkpoint_path": "checkpoints/gru_function_classifier",
         "tf_records_path": "data/.records/gru_function_classifier"
     },

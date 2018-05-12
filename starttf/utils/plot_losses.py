@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import os
+import tensorflow as tf
 try:
     from IPython.display import clear_output
     NO_IPYTHON = False
@@ -7,8 +8,8 @@ except ModuleNotFoundError:
     NO_IPYTHON = True
 
 
-class DefaultLossCallback(object):
-    def __init__(self, inline_plotting=False):
+class DefaultLossCallback(tf.train.SessionRunHook):
+    def __init__(self, hyper_params, losses, checkpoint_dir, inline_plotting=False, report_storage={}, mode="train"):
         """
         A metric plotter and saver.
 
@@ -19,9 +20,35 @@ class DefaultLossCallback(object):
 
         :param inline_plotting: This parameter is for jupyter notebook users. This will plot the loss not in a file but inside the notebook.
         """
-        self.iter_list = []
-        self.report_storage = []
+        self.hyper_params = hyper_params
+        self.losses = losses
+        self.checkpoint_dir = checkpoint_dir
+        self.report_storage = report_storage
+        self.mode = mode
+        if mode not in self.report_storage:
+            self.report_storage[mode] = {}
         self.inline_plotting = inline_plotting and not NO_IPYTHON
+
+    def after_run(self, run_context, run_values):
+        results = run_values.results
+        if self.mode == "eval" or results["step"] % self.hyper_params.train.save_checkpoint_steps == 0:
+            for k in results.keys():
+                if k not in self.report_storage[self.mode]:
+                    self.report_storage[self.mode][k] = []
+                self.report_storage[self.mode][k].append(results[k])
+
+            print("{}: Step {}, Loss {}".format(self.mode, self.report_storage[self.mode]["step"][-1], self.report_storage[self.mode]["loss"][-1]))
+
+            for k in results.keys():
+                if k == "step":
+                    continue
+                data = [(mode + "/" + k, self.report_storage[mode]["step"], self.report_storage[mode][k]) for mode in self.report_storage.keys()]
+                create_plot(k, self.checkpoint_dir, data, self.inline_plotting)
+
+    def before_run(self, run_context):
+        self.losses["step"] = tf.train.get_global_step()
+        run_args = tf.train.SessionRunArgs(fetches=self.losses)
+        return run_args
 
     def callback(self, i_step, metrics, reports, model_path):
         if self.inline_plotting:
@@ -56,7 +83,7 @@ def create_plot(title, model_path, data, inline_plotting=False):
         os.makedirs(model_path + "/images")
 
     plt.title(title)
-    plt.xlabel("iter")
+    plt.xlabel("step")
     plt.ylabel(title)
     csv_dat = {}
     for date in data:
@@ -75,7 +102,10 @@ def create_plot(title, model_path, data, inline_plotting=False):
         for row in range(n_rows):
             line = []
             for col in range(n_cols):
-                line.append("{}".format(csv_dat[cols[col]][row]))
+                value = ""
+                if len(csv_dat[cols[col]]) > row:
+                    value = csv_dat[cols[col]][row]
+                line.append("{}".format(value))
             csv += ",".join(line) + "\n"
 
         f.write(csv)

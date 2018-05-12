@@ -55,8 +55,6 @@ def create_model(input_tensor, mode, hyper_params):
     model = {}
 
     with tf.variable_scope('alexnet') as scope:
-        if mode == tf.estimator.ModeKeys.EVAL:
-            scope.reuse_variables()
         #conv1
         #conv(11, 11, 96, 4, 4, padding='VALID', name='conv1')
         k_h = 11; k_w = 11; c_o = 96; s_h = 4; s_w = 4

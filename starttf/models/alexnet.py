@@ -26,9 +26,6 @@ def create_model(input_tensor, mode, hyper_params):
     num_classes = 10
 
     with tf.variable_scope('alexnet_v2') as scope:
-        if mode == tf.estimator.ModeKeys.EVAL:
-            scope.reuse_variables()
-
         net = layers.conv2d(input_tensor, 64, [11, 11], 4, padding='VALID', scope='conv1')
         model["conv1"] = net
         net = layers_lib.max_pool2d(net, [3, 3], 2, scope='pool1')

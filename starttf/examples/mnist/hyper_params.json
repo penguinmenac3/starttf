@@ -1,10 +1,7 @@
 {
     "problem": {
         "data_path": "data/mnist",
-        "number_of_categories": 10,
-        "augmentation": {
-            "steps": 1
-        }
+        "number_of_categories": 10
     },
     "train": {
         "learning_rate": {
@@ -14,10 +11,12 @@
         "optimizer": {
             "type": "adam"
         },
-        "batch_size": 1024,
-        "validation_batch_size": 1024,
-        "iters": 10000,
-        "summary_iters": 100,
+        "batch_size": 2048,
+        "validation_batch_size": 2048,
+        "steps": 20000,
+        "summary_steps": 100,
+        "save_checkpoint_steps": 200,
+        "keep_checkpoint_max": 200,
         "checkpoint_path": "checkpoints/mnist",
         "tf_records_path": "data/.records/mnist"
     },

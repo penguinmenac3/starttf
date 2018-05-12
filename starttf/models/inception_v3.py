@@ -12,9 +12,6 @@ def create_model(input_tensor, mode, hyper_params):
     """
     model = {}
     with tf.variable_scope('inception_v3') as scope:
-        if mode == tf.estimator.ModeKeys.EVAL:
-            scope.reuse_variables()
-
         module = tf.contrib.hub.Module("https://tfhub.dev/google/imagenet/inception_v3/classification/1", trainable=hyper_params.inception_v3.trainable)
         model["logits"] = module(input_tensor["image"] / 255.0)
     return model

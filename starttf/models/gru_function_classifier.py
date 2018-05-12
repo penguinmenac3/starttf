@@ -17,9 +17,6 @@ def create_model(input_tensor, mode, hyper_params):
     """
     outputs = {}
     with tf.variable_scope('GruFunctionClassifier') as scope:
-        if mode == tf.estimator.ModeKeys.EVAL or mode == tf.estimator.ModeKeys.PREDICT:
-            scope.reuse_variables()
-
         batch_size = hyper_params.train.batch_size
         if mode == tf.estimator.ModeKeys.EVAL:
             batch_size = hyper_params.train.validation_batch_size

@@ -18,5 +18,5 @@ if __name__ == "__main__":
     validation_record_path = os.path.join(hyper_params.train.tf_records_path, "validation")
 
     # Write the data
-    write_data(hyper_params, train_record_path, train_gen, train_gen_params, 4)
-    write_data(hyper_params, validation_record_path, validation_gen, validation_gen_params, 2)
+    write_data(hyper_params, train_record_path, train_gen, train_gen_params, 8)
+    write_data(hyper_params, validation_record_path, validation_gen, validation_gen_params, 8)

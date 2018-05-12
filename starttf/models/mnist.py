@@ -12,9 +12,6 @@ def create_model(input_tensor, mode, hyper_params):
     """
     model = {}
     with tf.variable_scope('MnistNetwork') as scope:
-        if mode == tf.estimator.ModeKeys.EVAL:
-            scope.reuse_variables()
-
         # Prepare the inputs
         x = tf.reshape(tensor=input_tensor["image"], shape=(-1, 28, 28, 1), name="input")
 

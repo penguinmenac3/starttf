@@ -25,8 +25,11 @@ def _write_tf_record(hyper_params, data, record_filename, preprocess_feature=Non
     writer = tf.python_io.TFRecordWriter(record_filename)
 
     samples_written = 0
+    augmentation_steps = 1
+    if "problem" in hyper_params.__dict__ and "augmentation" in hyper_params.__dict__:
+        augmentation_steps = hyper_params.problem.augmentation.steps
     for orig_feature, orig_label in data:
-        for i in range(hyper_params.problem.augmentation.steps):
+        for i in range(augmentation_steps):
             feature = orig_feature
             label = orig_label
             if augment_data is not None:
@@ -82,6 +85,42 @@ def _read_tf_record(record_filename, config):
         outputs[k] = feature
 
     return outputs
+
+
+def create_parser_fn(config, phase):
+    def parser_fn(serialized_example):
+        tensor_dict = {}
+        for k in config.keys():
+            if "feature_" in k or "label_" in k:
+                tensor_dict[k] = tf.FixedLenFeature([], tf.string)
+
+        data = tf.parse_single_example(
+            serialized_example,
+            features=tensor_dict)
+
+        outputs = {}
+        for k in tensor_dict.keys():
+            tensor_shape = config[k]["shape"]
+            tensor_type = np.dtype(config[k]["dtype"])
+            tensor = tf.decode_raw(data[k], tensor_type)
+            tensor_len = 1
+            for x in list(tensor_shape):
+                tensor_len *= x
+            tensor.set_shape((tensor_len,))
+            outputs[k] = tensor
+
+        features = {}
+        labels = {}
+        for k in outputs.keys():
+            shape = tuple(list(config[k]["shape"]))
+            tensor = tf.reshape(outputs[k], shape, name="input/" + phase + "/" + k + "_reshape")
+            if "feature_" in k:
+                features["_".join(k.split("_")[1:])] = tensor
+            if "label_" in k:
+                labels["_".join(k.split("_")[1:])] = tensor
+
+        return features, labels
+    return parser_fn
 
 
 def write_data(hyper_params,
@@ -184,6 +223,50 @@ def read_data(prefix, batch_size):
             label_batch["_".join(k.split("_")[1:])] = tensor
 
     return feature_batch, label_batch
+
+
+def read_dataset(prefix, batch_size, augmentation=None):
+    """
+    Loads a dataset.
+
+    :param prefix: The path prefix as defined in the write data method.
+    :param batch_size: The batch size you want for the tensors.
+    :param augmentation: An augmentation function.
+    :return: A tensorflow.data.dataset object.
+    """
+    prefix = prefix.replace("\\", "/")
+    folder = "/".join(prefix.split("/")[:-1])
+    phase = prefix.split("/")[-1]
+    config = json.load(open(prefix + '_config.json'))
+    num_threads = config["num_threads"]
+
+    filenames = [folder + "/" + f for f in listdir(folder) if isfile(join(folder, f)) and phase in f and not "config.json" in f]
+
+    dataset = tf.data.TFRecordDataset(filenames=filenames, num_parallel_reads=num_threads)
+    dataset = dataset.shuffle(buffer_size=10 * batch_size)
+    dataset = dataset.repeat()
+    dataset = dataset.map(map_func=create_parser_fn(config, phase), num_parallel_calls=num_threads)
+    if augmentation is not None:
+        dataset = dataset.map(map_func=augmentation, num_parallel_calls=num_threads)
+    dataset = dataset.batch(batch_size=batch_size)
+    dataset = dataset.prefetch(buffer_size=1)
+
+    return dataset
+
+
+def create_input_fn(prefix, batch_size, augmentation=None):
+    """
+    Loads a dataset.
+
+    :param prefix: The path prefix as defined in the write data method.
+    :param batch_size: The batch size you want for the tensors.
+    :param augmentation: An augmentation function.
+    :return: An input function for a tf estimator.
+    """
+    def input_fn():
+        return read_dataset(prefix, batch_size, augmentation)
+
+    return input_fn
 
 
 @DeprecationWarning
