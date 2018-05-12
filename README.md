@@ -139,16 +139,21 @@ Full sample [here](https://github.com/penguinmenac3/starttf/blob/master/starttf/
 
 ```python
 def create_loss(model, labels, mode, hyper_params):
-    mode_name = mode_to_str(mode)
     metrics = {}
+    losses = {}
 
     # Add loss
-    labels = tf.reshape(labels, [-1, 10])
-    loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=model["logits"], labels=labels))
-    tf.summary.scalar(mode_name + '/loss', loss_op)
-    metrics[mode_name + '/loss'] = loss_op
+    labels = tf.reshape(labels["probs"], [-1, hyper_params.problem.number_of_categories])
+    ce = tf.nn.softmax_cross_entropy_with_logits_v2(logits=model["logits"], labels=labels)
+    loss_op = tf.reduce_mean(ce)
 
-    return loss_op, metrics
+    # Add losses to dict. "loss" is the primary loss that is optimized.
+    losses["loss"] = loss_op
+    metrics['accuracy'] = tf.metrics.accuracy(labels=labels,
+                                              predictions=model["probs"],
+                                              name='acc_op')
+
+    return losses, metrics
 ```
 
 ### Simple TF Record Creation
@@ -179,39 +184,14 @@ write_data(hyper_params, validation_record_path, validation_gen, validation_gen_
 ### Tensorboard Integration
 
 Tensorboard integration is simple.
-You just have to define a summary (e.g. a summary scalar for the loss) and it gets added to the tensorboard.
-No worries when to summarize and how to call it and merging.
-Simply define your summary and the rest is handled by the estimator.
 
-### TF Estimator Support (Not Recommended)
+Every loss in the losses dict is automatically added to tensorboard.
+If you also want debug images, you can add a tf.summary.image() in your create_loss method.
 
-Model and loss can be easily glued together in a model function and used with tf estimator.
-`mode` is a `tf.estimator.ModeKeys` to be Estimator compatible.
+### TF Estimator + Cluster Support
 
-```python
-from starttf.models.mnist import create_model
-from starttf.losses.mnist import create_loss
-
-def my_model_fn(features, labels, mode, hyper_params):
-    # Create a model
-    model = create_model(features, mode, hyper_params)
-    if tf.estimator.ModeKeys.PREDICT:
-        return tf.estimator.ModeKeys.EstimatorSpec(mode, predictions=model)
-    
-    # Add a loss
-    loss, metrics = create_loss(model, labels, mode, hyper_params)
-    if tf.estimators.ModeKeys.EVAL:
-        return tf.estimator.ModeKeys.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics)
-
-    # Define a training operation
-    if mode == tf.estimator.ModeKeys.TRAIN:
-        train_op = tf.train.RMSPropOptimizer(learning_rate=hyper_params.train.learning_rate,
-                                     decay=hyper_params.train.decay).minimize(loss)
-    
-        return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
-
-    raise RuntimeError("Unexpected mode.")
-```
+If you use the easy_train_and_evaluate method, a correctly configured TF Estimator is created.
+The estimator is then trained in a way that supports cluster training if you have a cluster.
 
 ### More details
 
