@@ -37,10 +37,10 @@ class DefaultLossCallback(tf.train.SessionRunHook):
                     self.report_storage[self.mode][k] = []
                 self.report_storage[self.mode][k].append(results[k])
 
-            print("{}: Step {}, Loss {}".format(self.mode, self.report_storage[self.mode]["step"][-1], self.report_storage[self.mode]["loss"][-1]))
-
             if self.inline_plotting:
                 clear_output()
+
+            print("{}: Step {}, Loss {}".format(self.mode, self.report_storage[self.mode]["step"][-1], self.report_storage[self.mode]["loss"][-1]))
 
             for k in results.keys():
                 if k == "step":
