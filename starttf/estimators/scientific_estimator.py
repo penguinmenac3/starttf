@@ -11,7 +11,7 @@ from starttf.utils.session_config import get_default_config
 from starttf.tfrecords.autorecords import create_input_fn, PHASE_TRAIN, PHASE_VALIDATION
 
 
-def create_tf_estimator_spec(chkpt_path, create_model, create_loss):
+def create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plotting=False):
     report_storage = {}
 
     def my_model_fn(features, labels, mode, params):
@@ -27,7 +27,8 @@ def create_tf_estimator_spec(chkpt_path, create_model, create_loss):
             tf.summary.scalar(k, losses[k])
 
         if mode == tf.estimator.ModeKeys.EVAL:
-            hooks = [DefaultLossCallback(params, losses, chkpt_path + "/eval", mode="eval", report_storage=report_storage)]
+            hooks = [DefaultLossCallback(params, losses, chkpt_path + "/eval", mode="eval",
+                                         report_storage=report_storage, inline_plotting=inline_plotting)]
             return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics, evaluation_hooks=hooks)
 
         # Define a training operation
@@ -61,7 +62,8 @@ def create_tf_estimator_spec(chkpt_path, create_model, create_loss):
             else:
                 raise RuntimeError("Unknown optimizer: %s" % params.train.optimizer.type)
 
-            hooks = [DefaultLossCallback(params, losses, chkpt_path, mode="train", report_storage=report_storage)]
+            hooks = [DefaultLossCallback(params, losses, chkpt_path, mode="train",
+                                         report_storage=report_storage, inline_plotting=inline_plotting)]
             return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op, training_hooks=hooks)
 
         raise RuntimeError("Unexpected mode.")
@@ -118,7 +120,7 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, init_model=
     with open(chkpt_path + "/hyperparameters.json", "w") as json_file:
         json_file.write(json.dumps(hyper_params.to_dict(), indent=4, sort_keys=True))
 
-    estimator_spec = create_tf_estimator_spec(chkpt_path, create_model, create_loss)
+    estimator_spec = create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plotting)
 
     # Train model.
 
