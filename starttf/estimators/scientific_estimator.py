@@ -6,9 +6,8 @@ import json
 import tensorflow as tf
 
 from starttf.utils.plot_losses import DefaultLossCallback
-from starttf.utils.session_config import get_default_config
 
-from starttf.tfrecords.autorecords import create_input_fn, PHASE_TRAIN, PHASE_VALIDATION
+from starttf.tfrecords.autorecords import create_input_fn, PHASE_TRAIN, PHASE_VALIDATION, create_legacy_input_fn
 
 
 def create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plotting=False):
@@ -71,7 +70,7 @@ def create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plott
     return my_model_fn
 
 
-def easy_train_and_evaluate(hyper_params, create_model, create_loss, init_model=None, inline_plotting=False):
+def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plotting=False):
     """
     Train and evaluate your model without any boilerplate code.
 
@@ -99,7 +98,6 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, init_model=
     :param hyper_params: The hyper parameters obejct loaded via starttf.utils.hyper_params.load_params
     :param create_model: A create_model function like that in starttf.models.mnist.
     :param create_loss: A create_loss function like that in starttf.examples.mnist.loss.
-    :param init_model: A init_model function, if your model gets initialized with pretrained weights (e.g. starttf.models.vgg16_encoder)
     :param inline_plotting: When you are using jupyter notebooks you can tell it to plot the loss directly inside the notebook.
     :return:
     """
@@ -111,10 +109,20 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, init_model=
 
     # Load training data
     print("Loading data")
-    train_dataset = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_TRAIN),
-                                             hyper_params.train.batch_size)
-    validation_dataset = create_input_fn(
-        os.path.join(hyper_params.train.tf_records_path, PHASE_VALIDATION), hyper_params.train.validation_batch_size)
+    train_dataset = None
+    validation_dataset = None
+    if tf.__version__.startswith("1.6") or tf.__version__.startswith("1.5") or tf.__version__.startswith("1.4")\
+            or tf.__version__.startswith("1.3") or tf.__version__.startswith("1.2") or tf.__version__.startswith("1.1")\
+            or tf.__version__.startswith("1.0"):
+        train_dataset = create_legacy_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_TRAIN),
+                                               hyper_params.train.batch_size)
+        validation_dataset = create_legacy_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_VALIDATION),
+                                             hyper_params.train.validation_batch_size)
+    else:
+        train_dataset = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_TRAIN),
+                                        hyper_params.train.batch_size)
+        validation_dataset = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_VALIDATION),
+                                             hyper_params.train.validation_batch_size)
 
     # Write hyper parameters to be able to track what config you had.
     with open(chkpt_path + "/hyperparameters.json", "w") as json_file:
@@ -122,12 +130,7 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, init_model=
 
     estimator_spec = create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plotting)
 
-    # Train model.
-
-    warm_start_dir = None
-    if "warm_start_checkpoint" in hyper_params.train.__dict__:
-        warm_start_dir = hyper_params.train.warm_start_checkpoint
-
+    # Create a run configuration
     config = None
     if "distributed" in hyper_params.train.__dict__ and hyper_params.train.distributed:
         distribution = tf.contrib.distribute.MirroredStrategy()
@@ -143,15 +146,28 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, init_model=
                                         save_checkpoints_steps=hyper_params.train.save_checkpoint_steps,
                                         keep_checkpoint_max=hyper_params.train.keep_checkpoint_max,
                                         keep_checkpoint_every_n_hours=1)
-    estimator = tf.estimator.Estimator(estimator_spec,
-                                       config=config,
-                                       warm_start_from=warm_start_dir,
-                                       params=hyper_params)
+
+    # Create the estimator.
+    estimator = None
+    if "warm_start_checkpoint" in hyper_params.train.__dict__:
+        warm_start_dir = hyper_params.train.warm_start_checkpoint
+        estimator = tf.estimator.Estimator(estimator_spec,
+                                           config=config,
+                                           warm_start_from=warm_start_dir,
+                                           params=hyper_params)
+    else:
+        estimator = tf.estimator.Estimator(estimator_spec,
+                                           config=config,
+                                           params=hyper_params)
+
+    # Specify training and actually train.
+    throttle_secs = 120
+    if "throttle_secs" in hyper_params.train.__dict__:
+        throttle_secs = hyper_params.train.throttle_secs
     train_spec = tf.estimator.TrainSpec(input_fn=train_dataset,
                                         max_steps=hyper_params.train.steps)
     eval_spec = tf.estimator.EvalSpec(input_fn=validation_dataset,
-                                      throttle_secs=120)
-
+                                      throttle_secs=throttle_secs)
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 
     return estimator

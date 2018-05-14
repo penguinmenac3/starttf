@@ -52,25 +52,9 @@ def create_model(input_tensor, mode, hyper_params):
         mean = tf.constant([123.68, 116.779, 103.939], dtype=tf.float32, shape=[1, 1, 1, 3], name='img_mean')
         normalized_image = image - mean
 
-        network = Vgg16Encoder({"data": normalized_image})
+        network = Vgg16Encoder({"data": normalized_image}, weight_file=hyper_params.vgg16.weight_file, ignore_missing=True)
         model = dict(network.layers)
         model["image"] = image
         model["normalized_image"] = normalized_image
         model["vgg16/caffe_network"] = network
     return model
-
-
-def init_model(hyper_params, model, session):
-    """
-    Load the pretrained weights for the model.
-
-    :param hyper_params: The hyper param file. "vgg16" : {"weight_file": "/path/to/weight_file"}
-    :param model: The vgg 16 model created by this packages create_model.
-    :param session: The tensorflow session.
-    :return:
-    """
-    if hyper_params.vgg16.weight_file:
-        print("Loading vgg16 weights: %s" % hyper_params.vgg16.weight_file)
-        with tf.variable_scope("vgg16") as scope:
-            scope.reuse_variables()
-            model["vgg16/caffe_network"].load(hyper_params.vgg16.weight_file, session, ignore_missing=True)

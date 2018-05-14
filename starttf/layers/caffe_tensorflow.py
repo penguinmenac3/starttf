@@ -65,7 +65,7 @@ def multi_output_layer(op):
 
 class Network(object):
 
-    def __init__(self, inputs, trainable=True):
+    def __init__(self, inputs, weight_file=None, ignore_missing=True, trainable=True):
         # The input nodes for this network
         self.inputs = inputs
         # The current list of terminal nodes
@@ -78,13 +78,16 @@ class Network(object):
         self.use_dropout = tf.placeholder_with_default(tf.constant(1.0),
                                                        shape=[],
                                                        name='use_dropout')
+        self.weights = {}
+        if weight_file:
+            self._load(weight_file, ignore_missing)
         self.setup()
 
     def setup(self):
         '''Construct the network. '''
         raise NotImplementedError('Must be implemented by the subclass.')
 
-    def load(self, data_path, session, ignore_missing=False):
+    def _load(self, data_path, ignore_missing=False):
         '''Load network weights.
         data_path: The path to the numpy-serialized network weights
         session: The current TensorFlow session
@@ -97,28 +100,19 @@ class Network(object):
                 data = data_dict[k]
                 op_name = "_".join(k.split("_")[:-1])
                 param_name = "weights" if k.split("_")[-1] == "W" else "biases"
-                with tf.variable_scope(op_name, reuse=True):
-                    try:
-                        var = tf.get_variable(param_name)
-                        session.run(var.assign(data))
-                        print("Loaded: {} {}".format(op_name, param_name))
-                    except ValueError:
-                        print("Failed Loading: {} {}".format(op_name, param_name))
-                        if not ignore_missing:
-                            raise
+                print("Loaded: {} {}".format(op_name, param_name))
+                if op_name not in self.weights:
+                    self.weights[op_name] = {}
+                self.weights[op_name][param_name] = data
         elif data_path.endswith(".npy"):
             data_dict = np.load(data_path).item()
             for op_name in data_dict:
                 with tf.variable_scope(op_name, reuse=True):
                     for param_name, data in data_dict[op_name].iteritems():
-                        try:
-                            var = tf.get_variable(param_name)
-                            session.run(var.assign(data))
-                            print("Loaded: {} {}".format(op_name, param_name))
-                        except ValueError:
-                            print("Failed Loading: {} {}".format(op_name, param_name))
-                            if not ignore_missing:
-                                raise
+                        print("Loaded: {} {}".format(op_name, param_name))
+                        if op_name not in self.weights:
+                            self.weights[op_name] = {}
+                        self.weights[op_name][param_name] = data
         else:
             raise RuntimeError("Invalid file type.")
 
@@ -148,8 +142,12 @@ class Network(object):
         ident = sum(t.startswith(prefix) for t, _ in self.layers.items()) + 1
         return '%s_%d' % (prefix, ident)
 
-    def make_var(self, name, shape):
+    def make_var(self, op_name, name, shape):
         '''Creates a new TensorFlow variable.'''
+        if op_name in self.weights and name in self.weights[op_name]:
+            print("Using: {} {}".format(op_name, name))
+            initializer = tf.constant(self.weights[op_name][name], shape=shape)
+            return tf.get_variable(name, initializer=initializer, trainable=self.trainable)
         return tf.get_variable(name, shape, trainable=self.trainable)
 
     def validate_padding(self, padding):
@@ -179,7 +177,7 @@ class Network(object):
         # Convolution for a given input and kernel
         convolve = lambda i, k: tf.nn.conv2d(i, k, [1, s_h, s_w, 1], padding=padding)
         with tf.variable_scope(name) as scope:
-            kernel = self.make_var('weights', shape=[k_h, k_w, c_i / group, c_o])
+            kernel = self.make_var(name, 'weights', shape=[k_h, k_w, c_i / group, c_o])
             if group == 1:
                 # This is the common-case. Convolve the input without any further complications.
                 output = convolve(input, kernel)
@@ -192,7 +190,7 @@ class Network(object):
                 output = tf.concat(3, output_groups)
             # Add the biases
             if biased:
-                biases = self.make_var('biases', [c_o])
+                biases = self.make_var(name, 'biases', [c_o])
                 output = tf.nn.bias_add(output, biases)
             if relu:
                 # ReLU non-linearity
@@ -250,8 +248,8 @@ class Network(object):
                 feed_in = tf.reshape(input, [-1, dim])
             else:
                 feed_in, dim = (input, input_shape[-1].value)
-            weights = self.make_var('weights', shape=[dim, num_out])
-            biases = self.make_var('biases', [num_out])
+            weights = self.make_var(name, 'weights', shape=[dim, num_out])
+            biases = self.make_var(name, 'biases', [num_out])
             op = tf.nn.relu_layer if relu else tf.nn.xw_plus_b
             fc = op(feed_in, weights, biases, name=scope.name)
             return fc
@@ -277,14 +275,14 @@ class Network(object):
         with tf.variable_scope(name) as scope:
             shape = [input.get_shape()[-1]]
             if scale_offset:
-                scale = self.make_var('scale', shape=shape)
-                offset = self.make_var('offset', shape=shape)
+                scale = self.make_var(name, 'scale', shape=shape)
+                offset = self.make_var(name, 'offset', shape=shape)
             else:
                 scale, offset = (None, None)
             output = tf.nn.batch_normalization(
                 input,
-                mean=self.make_var('mean', shape=shape),
-                variance=self.make_var('variance', shape=shape),
+                mean=self.make_var(name, 'mean', shape=shape),
+                variance=self.make_var(name, 'variance', shape=shape),
                 offset=offset,
                 scale=scale,
                 # TODO: This is the default Caffe batch norm eps

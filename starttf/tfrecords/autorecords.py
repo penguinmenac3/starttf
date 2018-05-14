@@ -87,7 +87,7 @@ def _read_tf_record(record_filename, config):
     return outputs
 
 
-def create_parser_fn(config, phase):
+def _create_parser_fn(config, phase):
     def parser_fn(serialized_example):
         tensor_dict = {}
         for k in config.keys():
@@ -184,7 +184,7 @@ def write_data(hyper_params,
     pool.map(_write_tf_record_pool_helper, args)
 
 
-def read_data(prefix, batch_size):
+def read_data_legacy(prefix, batch_size):
     """
     Loads a tf record as tensors you can use.
     :param prefix: The path prefix as defined in the write data method.
@@ -225,7 +225,7 @@ def read_data(prefix, batch_size):
     return feature_batch, label_batch
 
 
-def read_dataset(prefix, batch_size, augmentation=None):
+def read_data(prefix, batch_size, augmentation=None):
     """
     Loads a dataset.
 
@@ -245,7 +245,7 @@ def read_dataset(prefix, batch_size, augmentation=None):
     dataset = tf.data.TFRecordDataset(filenames=filenames, num_parallel_reads=num_threads)
     dataset = dataset.shuffle(buffer_size=10 * batch_size)
     dataset = dataset.repeat()
-    dataset = dataset.map(map_func=create_parser_fn(config, phase), num_parallel_calls=num_threads)
+    dataset = dataset.map(map_func=_create_parser_fn(config, phase), num_parallel_calls=num_threads)
     if augmentation is not None:
         dataset = dataset.map(map_func=augmentation, num_parallel_calls=num_threads)
     dataset = dataset.batch(batch_size=batch_size)
@@ -264,7 +264,22 @@ def create_input_fn(prefix, batch_size, augmentation=None):
     :return: An input function for a tf estimator.
     """
     def input_fn():
-        return read_dataset(prefix, batch_size, augmentation)
+        return read_data(prefix, batch_size, augmentation)
+
+    return input_fn
+
+
+def create_legacy_input_fn(prefix, batch_size, augmentation=None):
+    """
+    Loads a dataset the old way.
+
+    :param prefix: The path prefix as defined in the write data method.
+    :param batch_size: The batch size you want for the tensors.
+    :param augmentation: An augmentation function.
+    :return: An input function for a tf estimator.
+    """
+    def input_fn():
+        return read_data_legacy(prefix, batch_size)
 
     return input_fn
 
@@ -285,7 +300,7 @@ def auto_read_write_data(hyper_params, generate_data_fn, data_tmp_folder, force_
         write_data(hyper_params, os.path.join(data_tmp_folder, PHASE_VALIDATION), validation_data[0], validation_data[1], 2, preprocess_feature, preprocess_label)
 
     # Load data with tf records.
-    train_features, train_labels = read_data(os.path.join(data_tmp_folder, PHASE_TRAIN), hyper_params.train.batch_size)
-    validation_features, validation_labels = read_data(os.path.join(data_tmp_folder, PHASE_VALIDATION), hyper_params.train.validation_batch_size)
+    train_features, train_labels = read_data_legacy(os.path.join(data_tmp_folder, PHASE_TRAIN), hyper_params.train.batch_size)
+    validation_features, validation_labels = read_data_legacy(os.path.join(data_tmp_folder, PHASE_VALIDATION), hyper_params.train.validation_batch_size)
 
     return train_features, train_labels, validation_features, validation_labels
