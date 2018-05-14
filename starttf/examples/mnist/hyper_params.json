@@ -1,6 +1,6 @@
 {
     "problem": {
-        "data_path": "data/mnist",
+        "data_path": "datasets/mnist",
         "number_of_categories": 10
     },
     "train": {
@@ -18,7 +18,7 @@
         "save_checkpoint_steps": 200,
         "keep_checkpoint_max": 200,
         "checkpoint_path": "checkpoints/mnist",
-        "tf_records_path": "data/.records/mnist"
+        "tf_records_path": "tfrecords/mnist"
     },
     "arch": {
         "network_name": "MnistNetwork",

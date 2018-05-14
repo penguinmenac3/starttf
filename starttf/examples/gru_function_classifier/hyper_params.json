@@ -1,6 +1,6 @@
 {
     "problem": {
-        "data_path": "data/gru_function_classifier",
+        "data_path": "datasets/gru_function_classifier",
         "training_examples": 10000,
         "validation_examples": 1000
     },
@@ -19,7 +19,7 @@
         "save_checkpoint_steps": 200,
         "keep_checkpoint_max": 200,
         "checkpoint_path": "checkpoints/gru_function_classifier",
-        "tf_records_path": "data/.records/gru_function_classifier"
+        "tf_records_path": "tfrecords/gru_function_classifier"
     },
     "arch": {
         "network_name": "GruFunctionClassifier",

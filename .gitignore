@@ -1,7 +1,11 @@
 .idea
 .vscode
-data
+datasets
 checkpoints
+tfrecords
+checkpoints.lnk
+datasets.lnk
+tfrecords.lnk
 
 startkeras/models/weights/*
 nonpublic/*
