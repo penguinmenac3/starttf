@@ -34,8 +34,8 @@ You can launch your code from the command line like the example.
 ```bash
 # Activate your virtual environment (in my case venv)
 # Then do the following
-(venv) $ pyhon -m starttf.examples.mnist.prepare_training
-(venv) $ pyhon -m starttf.examples.mnist.train
+(venv) $ python -m starttf.examples.mnist.prepare_training
+(venv) $ python -m starttf.examples.mnist.train
 ```
 
 ## Datasets
