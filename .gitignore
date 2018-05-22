@@ -3,9 +3,11 @@
 datasets
 checkpoints
 tfrecords
+weights
 checkpoints.lnk
 datasets.lnk
 tfrecords.lnk
+weights.lnk
 
 startkeras/models/weights/*
 nonpublic/*
