@@ -56,5 +56,4 @@ def create_model(input_tensor, mode, hyper_params):
         model = dict(network.layers)
         model["image"] = image
         model["normalized_image"] = normalized_image
-        model["vgg16/caffe_network"] = network
     return model
