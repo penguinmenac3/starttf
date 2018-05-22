@@ -87,7 +87,6 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
                 "type": "adam"
             },
             "batch_size": 1024,
-            "validation_batch_size": 1024,
             "iters": 10000,
             "summary_iters": 100,
             "checkpoint_path": "checkpoints/mnist",
@@ -117,12 +116,12 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
         train_dataset = create_legacy_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_TRAIN),
                                                hyper_params.train.batch_size)
         validation_dataset = create_legacy_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_VALIDATION),
-                                             hyper_params.train.validation_batch_size)
+                                             hyper_params.train.batch_size)
     else:
         train_dataset = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_TRAIN),
                                         hyper_params.train.batch_size)
         validation_dataset = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_VALIDATION),
-                                             hyper_params.train.validation_batch_size)
+                                             hyper_params.train.batch_size)
 
     # Write hyper parameters to be able to track what config you had.
     with open(chkpt_path + "/hyperparameters.json", "w") as json_file:
