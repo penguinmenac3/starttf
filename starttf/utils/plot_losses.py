@@ -96,7 +96,7 @@ def create_plot(title, model_path, data, inline_plotting=False):
         csv_dat[label + "/y"] = y
     plt.legend()
 
-    with open(model_path + "/images/" + title + ".csv", "w") as f:
+    with open(model_path + "/images/" + title.replace("/", ".") + ".csv", "w") as f:
         cols = list(csv_dat.keys())
         n_cols = len(cols)
         n_rows = max([len(csv_dat[cols[i]]) for i in range(n_cols)])
@@ -116,7 +116,7 @@ def create_plot(title, model_path, data, inline_plotting=False):
     if inline_plotting:
         plt.show()
     else:
-        plt.savefig(model_path + "/images/" + title + ".png")
+        plt.savefig(model_path + "/images/" + title.replace("/", ".") + ".png")
     plt.clf()
 
 
