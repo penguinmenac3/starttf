@@ -1,4 +1,5 @@
 import json
+from jsmin import jsmin
 
 
 def json_file_to_object(filepath):
@@ -8,7 +9,7 @@ def json_file_to_object(filepath):
     :return: The object.
     """
     with open(filepath) as file:
-        return Dict2Obj(json.load(file))
+        return Dict2Obj(json.loads(jsmin(file.read())))
 
 
 class Dict2Obj(object):
