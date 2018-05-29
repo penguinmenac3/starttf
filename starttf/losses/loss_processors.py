@@ -31,7 +31,8 @@ def focus_loss(labels, probs, loss, gamma):
     :return: A tensor representing the weighted cross entropy.
     """
     # Compute p_t that is used in paper.
-    p_t = tf.reduce_sum(probs * labels, axis=-1) + tf.reduce_sum((1.0 - probs) * (1.0 - labels), axis=-1)
+    # FIXME is it possible that the 1-p term does not make any sense?
+    p_t = tf.reduce_sum(probs * labels, axis=-1)# + tf.reduce_sum((1.0 - probs) * (1.0 - labels), axis=-1)
     return tf.pow(1.0 - p_t, gamma) * loss
 
 
