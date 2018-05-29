@@ -123,6 +123,100 @@ def _create_parser_fn(config, phase):
     return parser_fn
 
 
+def _read_data_legacy(prefix, batch_size):
+    """
+    Loads a tf record as tensors you can use.
+    :param prefix: The path prefix as defined in the write data method.
+    :param batch_size: The batch size you want for the tensors.
+    :return: A feature tensor dict and a label tensor dict.
+    """
+    prefix = prefix.replace("\\", "/")
+    folder = "/".join(prefix.split("/")[:-1])
+    phase = prefix.split("/")[-1]
+    config = json.load(open(prefix + '_config.json'))
+    num_threads = config["num_threads"]
+
+    filenames = [folder + "/" + f for f in listdir(folder) if isfile(join(folder, f)) and phase in f and not "config.json" in f]
+
+    # Create a tf object for the filename list and the readers.
+    filename_queue = tf.train.string_input_producer(filenames)
+    readers = [_read_tf_record(filename_queue, config) for _ in range(num_threads)]
+
+    batch_dict = tf.train.shuffle_batch_join(
+        readers,
+        batch_size=batch_size,
+        capacity=10 * batch_size,
+        min_after_dequeue=5 * batch_size
+    )
+
+    # Add batch dimension to feature and label shape
+
+    feature_batch = {}
+    label_batch = {}
+    for k in batch_dict.keys():
+        shape = tuple([batch_size] + list(config[k]["shape"]))
+        tensor = tf.reshape(batch_dict[k], shape, name="input/"+phase+"/" + k + "_reshape")
+        if "feature_" in k:
+            feature_batch["_".join(k.split("_")[1:])] = tensor
+        if "label_" in k:
+            label_batch["_".join(k.split("_")[1:])] = tensor
+
+    return feature_batch, label_batch
+
+
+def _read_data(prefix, batch_size, augmentation=None):
+    """
+    Loads a dataset.
+
+    :param prefix: The path prefix as defined in the write data method.
+    :param batch_size: The batch size you want for the tensors.
+    :param augmentation: An augmentation function.
+    :return: A tensorflow.data.dataset object.
+    """
+    prefix = prefix.replace("\\", "/")
+    folder = "/".join(prefix.split("/")[:-1])
+    phase = prefix.split("/")[-1]
+    config = json.load(open(prefix + '_config.json'))
+    num_threads = config["num_threads"]
+
+    filenames = [folder + "/" + f for f in listdir(folder) if isfile(join(folder, f)) and phase in f and not "config.json" in f]
+
+    dataset = tf.data.TFRecordDataset(filenames=filenames, num_parallel_reads=num_threads)
+    dataset = dataset.shuffle(buffer_size=10 * batch_size)
+    dataset = dataset.repeat()
+    dataset = dataset.map(map_func=_create_parser_fn(config, phase), num_parallel_calls=num_threads)
+    if augmentation is not None:
+        dataset = dataset.map(map_func=augmentation, num_parallel_calls=num_threads)
+    dataset = dataset.batch(batch_size=batch_size)
+    dataset = dataset.prefetch(buffer_size=1)
+
+    return dataset
+
+
+def create_input_fn(prefix, batch_size, augmentation=None):
+    """
+    Loads a dataset.
+
+    :param prefix: The path prefix as defined in the write data method.
+    :param batch_size: The batch size you want for the tensors.
+    :param augmentation: An augmentation function.
+    :return: An input function for a tf estimator.
+    """
+    # Check if the version is too old for dataset api to work better than manually loading data.
+    if tf.__version__.startswith("1.6") or tf.__version__.startswith("1.5") or tf.__version__.startswith("1.4") \
+            or tf.__version__.startswith("1.3") or tf.__version__.startswith("1.2") \
+            or tf.__version__.startswith("1.1") or tf.__version__.startswith("1.0"):
+        def input_fn():
+            return _read_data_legacy(prefix, batch_size)
+
+        return input_fn
+    else:
+        def input_fn():
+            return _read_data(prefix, batch_size, augmentation)
+
+        return input_fn
+
+
 def write_data(hyper_params,
                prefix,
                threadable_generator,
@@ -182,125 +276,3 @@ def write_data(hyper_params,
 
     pool = Pool(processes=num_threads)
     pool.map(_write_tf_record_pool_helper, args)
-
-
-def read_data_legacy(prefix, batch_size):
-    """
-    Loads a tf record as tensors you can use.
-    :param prefix: The path prefix as defined in the write data method.
-    :param batch_size: The batch size you want for the tensors.
-    :return: A feature tensor dict and a label tensor dict.
-    """
-    prefix = prefix.replace("\\", "/")
-    folder = "/".join(prefix.split("/")[:-1])
-    phase = prefix.split("/")[-1]
-    config = json.load(open(prefix + '_config.json'))
-    num_threads = config["num_threads"]
-
-    filenames = [folder + "/" + f for f in listdir(folder) if isfile(join(folder, f)) and phase in f and not "config.json" in f]
-
-    # Create a tf object for the filename list and the readers.
-    filename_queue = tf.train.string_input_producer(filenames)
-    readers = [_read_tf_record(filename_queue, config) for _ in range(num_threads)]
-
-    batch_dict = tf.train.shuffle_batch_join(
-        readers,
-        batch_size=batch_size,
-        capacity=10 * batch_size,
-        min_after_dequeue=5 * batch_size
-    )
-
-    # Add batch dimension to feature and label shape
-
-    feature_batch = {}
-    label_batch = {}
-    for k in batch_dict.keys():
-        shape = tuple([batch_size] + list(config[k]["shape"]))
-        tensor = tf.reshape(batch_dict[k], shape, name="input/"+phase+"/" + k + "_reshape")
-        if "feature_" in k:
-            feature_batch["_".join(k.split("_")[1:])] = tensor
-        if "label_" in k:
-            label_batch["_".join(k.split("_")[1:])] = tensor
-
-    return feature_batch, label_batch
-
-
-def read_data(prefix, batch_size, augmentation=None):
-    """
-    Loads a dataset.
-
-    :param prefix: The path prefix as defined in the write data method.
-    :param batch_size: The batch size you want for the tensors.
-    :param augmentation: An augmentation function.
-    :return: A tensorflow.data.dataset object.
-    """
-    prefix = prefix.replace("\\", "/")
-    folder = "/".join(prefix.split("/")[:-1])
-    phase = prefix.split("/")[-1]
-    config = json.load(open(prefix + '_config.json'))
-    num_threads = config["num_threads"]
-
-    filenames = [folder + "/" + f for f in listdir(folder) if isfile(join(folder, f)) and phase in f and not "config.json" in f]
-
-    dataset = tf.data.TFRecordDataset(filenames=filenames, num_parallel_reads=num_threads)
-    dataset = dataset.shuffle(buffer_size=10 * batch_size)
-    dataset = dataset.repeat()
-    dataset = dataset.map(map_func=_create_parser_fn(config, phase), num_parallel_calls=num_threads)
-    if augmentation is not None:
-        dataset = dataset.map(map_func=augmentation, num_parallel_calls=num_threads)
-    dataset = dataset.batch(batch_size=batch_size)
-    dataset = dataset.prefetch(buffer_size=1)
-
-    return dataset
-
-
-def create_input_fn(prefix, batch_size, augmentation=None):
-    """
-    Loads a dataset.
-
-    :param prefix: The path prefix as defined in the write data method.
-    :param batch_size: The batch size you want for the tensors.
-    :param augmentation: An augmentation function.
-    :return: An input function for a tf estimator.
-    """
-    def input_fn():
-        return read_data(prefix, batch_size, augmentation)
-
-    return input_fn
-
-
-def create_legacy_input_fn(prefix, batch_size, augmentation=None):
-    """
-    Loads a dataset the old way.
-
-    :param prefix: The path prefix as defined in the write data method.
-    :param batch_size: The batch size you want for the tensors.
-    :param augmentation: An augmentation function.
-    :return: An input function for a tf estimator.
-    """
-    def input_fn():
-        return read_data_legacy(prefix, batch_size)
-
-    return input_fn
-
-
-@DeprecationWarning
-def auto_read_write_data(hyper_params, generate_data_fn, data_tmp_folder, force_generate_data=False, preprocess_feature=None, preprocess_label=None):
-    """
-    Deprecated: Do not use!
-    """
-    if force_generate_data or not os.path.exists(data_tmp_folder):
-        if not os.path.exists(data_tmp_folder):
-            os.makedirs(data_tmp_folder)
-        # Create training data.
-        train_data, validation_data = generate_data_fn()
-
-        # Write tf records
-        write_data(hyper_params, os.path.join(data_tmp_folder, PHASE_TRAIN), train_data[0], train_data[1], 4, preprocess_feature, preprocess_label)
-        write_data(hyper_params, os.path.join(data_tmp_folder, PHASE_VALIDATION), validation_data[0], validation_data[1], 2, preprocess_feature, preprocess_label)
-
-    # Load data with tf records.
-    train_features, train_labels = read_data_legacy(os.path.join(data_tmp_folder, PHASE_TRAIN), hyper_params.train.batch_size)
-    validation_features, validation_labels = read_data_legacy(os.path.join(data_tmp_folder, PHASE_VALIDATION), hyper_params.train.validation_batch_size)
-
-    return train_features, train_labels, validation_features, validation_labels

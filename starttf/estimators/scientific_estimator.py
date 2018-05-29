@@ -7,7 +7,7 @@ import tensorflow as tf
 
 from starttf.utils.plot_losses import DefaultLossCallback
 
-from starttf.tfrecords.autorecords import create_input_fn, PHASE_TRAIN, PHASE_VALIDATION, create_legacy_input_fn
+from starttf.tfrecords.autorecords import create_input_fn, PHASE_TRAIN, PHASE_VALIDATION
 
 
 def create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plotting=False):
@@ -133,20 +133,10 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
 
     # Load training data
     print("Loading data")
-    train_dataset = None
-    validation_dataset = None
-    if tf.__version__.startswith("1.6") or tf.__version__.startswith("1.5") or tf.__version__.startswith("1.4")\
-            or tf.__version__.startswith("1.3") or tf.__version__.startswith("1.2") or tf.__version__.startswith("1.1")\
-            or tf.__version__.startswith("1.0"):
-        train_dataset = create_legacy_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_TRAIN),
-                                               hyper_params.train.batch_size)
-        validation_dataset = create_legacy_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_VALIDATION),
-                                             hyper_params.train.batch_size)
-    else:
-        train_dataset = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_TRAIN),
-                                        hyper_params.train.batch_size)
-        validation_dataset = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_VALIDATION),
-                                             hyper_params.train.batch_size)
+    train_dataset = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_TRAIN),
+                                    hyper_params.train.batch_size)
+    validation_dataset = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_VALIDATION),
+                                         hyper_params.train.batch_size)
 
     # Write hyper parameters to be able to track what config you had.
     with open(chkpt_path + "/hyperparameters.json", "w") as json_file:
@@ -193,5 +183,26 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
     eval_spec = tf.estimator.EvalSpec(input_fn=validation_dataset,
                                       throttle_secs=throttle_secs)
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
+
+    return estimator
+
+
+def create_prediction_estimator(hyper_params, create_model):
+    """
+    Create an estimator for prediction purpose only.
+    :param hyper_params: The hyper params file.
+    :param create_model: The create model function.
+    :return:
+    """
+    chkpts = sorted([name for name in os.listdir(hyper_params.train.checkpoint_path)])
+    chkpt_path = hyper_params.train.checkpoint_path + "/" + chkpts[-1]
+    print("Latest found checkpoint: {}".format(chkpt_path))
+
+    estimator_spec = create_tf_estimator_spec(chkpt_path, create_model, create_loss=None)
+
+    # Create the estimator.
+    estimator = tf.estimator.Estimator(estimator_spec,
+                                       model_dir=chkpt_path,
+                                       params=hyper_params)
 
     return estimator
