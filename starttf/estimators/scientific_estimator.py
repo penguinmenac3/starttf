@@ -36,7 +36,7 @@ def create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plott
             global_step = tf.train.get_global_step()
             if params.train.learning_rate.type == "exponential":
                 learning_rate = tf.train.exponential_decay(params.train.learning_rate.start_value, global_step,
-                                                           params.train.iters,
+                                                           params.train.steps,
                                                            params.train.learning_rate.end_value / params.train.learning_rate.start_value,
                                                            staircase=False, name="lr_decay")
                 tf.summary.scalar('hyper_params/lr/start_value',
@@ -70,7 +70,7 @@ def create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plott
     return my_model_fn
 
 
-def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plotting=False):
+def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plotting=False, continue_training=False):
     """
     Train and evaluate your model without any boilerplate code.
 
@@ -98,10 +98,16 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
     :param create_model: A create_model function like that in starttf.models.mnist.
     :param create_loss: A create_loss function like that in starttf.examples.mnist.loss.
     :param inline_plotting: When you are using jupyter notebooks you can tell it to plot the loss directly inside the notebook.
+    :param continue_training: Bool, continue last training in the checkpoint path specified in the hyper parameters.
     :return:
     """
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
     chkpt_path = hyper_params.train.checkpoint_path + "/" + time_stamp
+
+    if continue_training:
+        chkpts = sorted([name for name in os.listdir(hyper_params.train.checkpoint_path)])
+        chkpt_path = hyper_params.train.checkpoint_path + "/" + chkpts[-1]
+        print("Latest found checkpoint: {}".format(chkpt_path))
 
     if not os.path.exists(chkpt_path):
         os.makedirs(chkpt_path)
