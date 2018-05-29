@@ -52,12 +52,31 @@ def create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plott
 
             # Setup Optimizer
             train_op = None
-            if params.train.optimizer.type == "rmsprop":
-                train_op = tf.train.RMSPropOptimizer(learning_rate=learning_rate).minimize(loss,
-                                                                                           global_step=global_step)
+            if params.train.optimizer.type == "sgd":
+                train_op = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(loss,
+                                                                                                global_step=global_step)
+            elif params.train.optimizer.type == "rmsprop":
+                decay = params.train.optimizer.get_or_default("decay", 0.9)
+                momentum = params.train.optimizer.get_or_default("momentum", 0.0)
+                epsilon = params.train.optimizer.get_or_default("epsilon", 1e-10)
+                train_op = tf.train.RMSPropOptimizer(learning_rate=learning_rate, decay=decay, momentum=momentum,
+                                                     epsilon=epsilon).minimize(loss, global_step=global_step)
+            elif params.train.optimizer.type == "adadelta":
+                rho = params.train.optimizer.get_or_default("rho", 0.95)
+                epsilon = params.train.optimizer.get_or_default("epsilon", 1e-08)
+                train_op = tf.train.AdadeltaOptimizer(learning_rate=learning_rate, rho=rho,
+                                                      epsilon=epsilon).minimize(loss, global_step=global_step)
+            elif params.train.optimizer.type == "adagrad":
+                initial_accumulator_value = params.train.optimizer.get_or_default("initial_accumulator_value", 0.1)
+                train_op = tf.train.AdagradOptimizer(learning_rate=learning_rate,
+                                                     initial_accumulator_value=initial_accumulator_value).minimize(loss,
+                                                                                                global_step=global_step)
             elif params.train.optimizer.type == "adam":
-                train_op = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss,
-                                                                                        global_step=global_step)
+                beta1 = params.train.optimizer.get_or_default("beta1", 0.9)
+                beta2 = params.train.optimizer.get_or_default("beta2", 0.999)
+                epsilon = params.train.optimizer.get_or_default("epsilon", 1e-08)
+                train_op = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=beta1, beta2=beta2,
+                                                  epsilon=epsilon).minimize(loss, global_step=global_step)
             else:
                 raise RuntimeError("Unknown optimizer: %s" % params.train.optimizer.type)
 

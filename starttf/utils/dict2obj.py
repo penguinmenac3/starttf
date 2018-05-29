@@ -34,3 +34,12 @@ class Dict2Obj(object):
 
     def pretty_print(self):
         print(json.dumps(self.to_dict(), indent=4, sort_keys=True))
+
+    def get_or_default(self, key, default):
+        """
+        Get the value specified in the dictionary or a default.
+        :param key: The key which should be retrieved.
+        :param default: The default that is returned if the key is not set.
+        :return: The value from the dict or the default.
+        """
+        return self.__dict__[key] if key in self.__dict__ else default
