@@ -12,16 +12,17 @@ def overlay_classification_on_image(classification, rgb_image, scale=1):
     :param scale: The scale with which to multiply the size of the image to achieve the normal size.
     :return: The merged image tensor.
     """
-    if not classification.get_shape()[3] in [1, 2, 3]:
-        raise RuntimeError("The classification can either be of 1, 2 or 3 dimensions as last dimension, but shape is {}".format(classification.get_shape().as_list()))
+    with tf.variable_scope("debug_overlay"):
+        if not classification.get_shape()[3] in [1, 2, 3]:
+            raise RuntimeError("The classification can either be of 1, 2 or 3 dimensions as last dimension, but shape is {}".format(classification.get_shape().as_list()))
 
-    size = rgb_image.get_shape()[1:3]
-    if classification.get_shape()[3] == 1:
-        classification = tf.pad(classification, [[0, 0], [0, 0], [0, 0], [0, 2]], "CONSTANT")
-    elif classification.get_shape()[3] == 2:
-        classification = tf.pad(classification, [[0, 0], [0, 0], [0, 0], [0, 1]], "CONSTANT")
-    casted_classification = tf.cast(classification, dtype=tf.float32)
-    target_size = (int(classification.get_shape()[1] * scale), int(classification.get_shape()[2] * scale))
-    scaled_image = tf.image.resize_images(casted_classification, size=target_size, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-    cropped_img = tf.image.crop_to_bounding_box(scaled_image, 0, 0, size[0], size[1])
-    return 0.5 * rgb_image + 0.5 * 255 * cropped_img
+        size = rgb_image.get_shape()[1:3]
+        if classification.get_shape()[3] == 1:
+            classification = tf.pad(classification, [[0, 0], [0, 0], [0, 0], [0, 2]], "CONSTANT")
+        elif classification.get_shape()[3] == 2:
+            classification = tf.pad(classification, [[0, 0], [0, 0], [0, 0], [0, 1]], "CONSTANT")
+        casted_classification = tf.cast(classification, dtype=tf.float32)
+        target_size = (int(classification.get_shape()[1] * scale), int(classification.get_shape()[2] * scale))
+        scaled_image = tf.image.resize_images(casted_classification, size=target_size, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+        cropped_img = tf.image.crop_to_bounding_box(scaled_image, 0, 0, size[0], size[1])
+        return 0.5 * rgb_image + 0.5 * 255 * cropped_img

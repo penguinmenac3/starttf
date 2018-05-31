@@ -18,18 +18,20 @@ def _write_tf_record_pool_helper(args):
     hyper_params, data, num_threads, i, record_filename, preprocess_feature, preprocess_label, augment_data = args
     data_fn, data_params = data
     thread_name = "%s:thread_%d" % (record_filename, i)
-    _write_tf_record(hyper_params, data_fn(data_params, num_threads, i), record_filename, preprocess_feature, preprocess_label, augment_data, thread_name=thread_name)
+    _write_tf_record(hyper_params, data_fn, data_params, num_threads, i, record_filename, preprocess_feature, preprocess_label, augment_data, thread_name=thread_name)
 
 
-def _write_tf_record(hyper_params, data, record_filename, preprocess_feature=None, preprocess_label=None, augment_data=None, thread_name="thread"):
+def _write_tf_record(hyper_params, data_fn, data_params, num_threads, i, record_filename, preprocess_feature=None, preprocess_label=None, augment_data=None, thread_name="thread"):
     writer = tf.python_io.TFRecordWriter(record_filename)
 
     samples_written = 0
     augmentation_steps = 1
-    if "problem" in hyper_params.__dict__ and "augmentation" in hyper_params.__dict__:
+    if "problem" in hyper_params.__dict__ and "augmentation" in hyper_params.problem.__dict__:
         augmentation_steps = hyper_params.problem.augmentation.steps
-    for orig_feature, orig_label in data:
-        for i in range(augmentation_steps):
+
+    for i in range(augmentation_steps):
+        data = data_fn(data_params, num_threads, i)
+        for orig_feature, orig_label in data:
             feature = orig_feature
             label = orig_label
             if augment_data is not None:
@@ -207,13 +209,13 @@ def create_input_fn(prefix, batch_size, augmentation=None):
             or tf.__version__.startswith("1.3") or tf.__version__.startswith("1.2") \
             or tf.__version__.startswith("1.1") or tf.__version__.startswith("1.0"):
         def input_fn():
-            return _read_data_legacy(prefix, batch_size)
-
+            with tf.variable_scope("input_pipeline"):
+                return _read_data_legacy(prefix, batch_size)
         return input_fn
     else:
         def input_fn():
-            return _read_data(prefix, batch_size, augmentation)
-
+            with tf.variable_scope("input_pipeline"):
+                return _read_data(prefix, batch_size, augmentation)
         return input_fn
 
 

@@ -13,9 +13,10 @@ def alpha_balance_loss(labels, loss, alpha_weights):
                               of dimensions to labels tensor) representing the weights for each class.
     :return: A tensor representing the weighted cross entropy.
     """
-    # Broadcast multiply labels with alpha weights to select weights and then reduce them along last axis.
-    weights = tf.reduce_sum(labels * alpha_weights, axis=-1)
-    return weights * loss
+    with tf.variable_scope("alpha_balance"):
+        # Broadcast multiply labels with alpha weights to select weights and then reduce them along last axis.
+        weights = tf.reduce_sum(labels * alpha_weights, axis=-1)
+        return weights * loss
 
 
 def focus_loss(labels, probs, loss, gamma):
@@ -30,10 +31,11 @@ def focus_loss(labels, probs, loss, gamma):
     :param gamma: The focus parameter.
     :return: A tensor representing the weighted cross entropy.
     """
-    # Compute p_t that is used in paper.
-    # FIXME is it possible that the 1-p term does not make any sense?
-    p_t = tf.reduce_sum(probs * labels, axis=-1)# + tf.reduce_sum((1.0 - probs) * (1.0 - labels), axis=-1)
-    return tf.pow(1.0 - p_t, gamma) * loss
+    with tf.variable_scope("focus_loss"):
+        # Compute p_t that is used in paper.
+        # FIXME is it possible that the 1-p term does not make any sense?
+        p_t = tf.reduce_sum(probs * labels, axis=-1)# + tf.reduce_sum((1.0 - probs) * (1.0 - labels), axis=-1)
+        return tf.pow(1.0 - p_t, gamma) * loss
 
 
 def mask_loss(input_tensor, binary_tensor):
@@ -44,6 +46,7 @@ def mask_loss(input_tensor, binary_tensor):
     :param binary_tensor: A float tensor of shape [batch_size, ...] representing the mask.
     :return: A float tensor of shape [batch_size, ...] representing the masked loss.
     """
-    mask = tf.cast(tf.cast(binary_tensor, tf.bool), tf.float32)
+    with tf.variable_scope("mask_loss"):
+        mask = tf.cast(tf.cast(binary_tensor, tf.bool), tf.float32)
 
-    return input_tensor * mask
+        return input_tensor * mask

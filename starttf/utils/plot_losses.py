@@ -42,11 +42,12 @@ class DefaultLossCallback(tf.train.SessionRunHook):
 
             print("{}: Step {}, Loss {}".format(self.mode, self.report_storage[self.mode]["step"][-1], self.report_storage[self.mode]["loss"][-1]))
 
-            for k in results.keys():
-                if k == "step":
-                    continue
-                data = [(mode + "/" + k, self.report_storage[mode]["step"], self.report_storage[mode][k]) for mode in self.report_storage.keys()]
-                create_plot(k, self.checkpoint_dir, data, self.inline_plotting)
+            if self.mode != "eval":
+                for k in results.keys():
+                    if k == "step":
+                        continue
+                    data = [(mode + "/" + k, self.report_storage[mode]["step"], self.report_storage[mode][k]) for mode in self.report_storage.keys()]
+                    create_plot(k, self.checkpoint_dir, data, self.inline_plotting)
 
     def before_run(self, run_context):
         self.losses["step"] = tf.train.get_global_step()

@@ -16,12 +16,14 @@ def create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plott
     def my_model_fn(features, labels, mode, params):
         # Create a model
         model = create_model(features, mode, params)
+
         if mode == tf.estimator.ModeKeys.PREDICT:
             return tf.estimator.EstimatorSpec(mode, predictions=model)
 
         # Add a loss
         losses, metrics = create_loss(model, labels, mode, params)
         loss = losses["loss"]
+
         for k in losses.keys():
             tf.summary.scalar(k, losses[k])
 
@@ -30,59 +32,60 @@ def create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plott
                                          report_storage=report_storage, inline_plotting=inline_plotting)]
             return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics, evaluation_hooks=hooks)
 
-        # Define a training operation
-        if mode == tf.estimator.ModeKeys.TRAIN:
-            learning_rate = None
-            global_step = tf.train.get_global_step()
-            if params.train.learning_rate.type == "exponential":
-                learning_rate = tf.train.exponential_decay(params.train.learning_rate.start_value, global_step,
-                                                           params.train.steps,
-                                                           params.train.learning_rate.end_value / params.train.learning_rate.start_value,
-                                                           staircase=False, name="lr_decay")
-                tf.summary.scalar('hyper_params/lr/start_value',
-                                  tf.constant(params.train.learning_rate.start_value))
-                tf.summary.scalar('hyper_params/lr/end_value', tf.constant(params.train.learning_rate.end_value))
-            elif params.train.learning_rate.type == "const":
-                learning_rate = tf.constant(params.train.learning_rate.start_value, dtype=tf.float32)
-                tf.summary.scalar('hyper_params/lr/start_value',
-                                  tf.constant(params.train.learning_rate.start_value))
-            else:
-                raise RuntimeError("Unknown learning rate: %s" % params.train.learning_rate.type)
-            tf.summary.scalar('hyper_params/lr/learning_rate', learning_rate)
+        with tf.variable_scope("optimizer"):
+            # Define a training operation
+            if mode == tf.estimator.ModeKeys.TRAIN:
+                learning_rate = None
+                global_step = tf.train.get_global_step()
+                if params.train.learning_rate.type == "exponential":
+                    learning_rate = tf.train.exponential_decay(params.train.learning_rate.start_value, global_step,
+                                                               params.train.steps,
+                                                               params.train.learning_rate.end_value / params.train.learning_rate.start_value,
+                                                               staircase=False, name="lr_decay")
+                    tf.summary.scalar('hyper_params/lr/start_value',
+                                      tf.constant(params.train.learning_rate.start_value))
+                    tf.summary.scalar('hyper_params/lr/end_value', tf.constant(params.train.learning_rate.end_value))
+                elif params.train.learning_rate.type == "const":
+                    learning_rate = tf.constant(params.train.learning_rate.start_value, dtype=tf.float32)
+                    tf.summary.scalar('hyper_params/lr/start_value',
+                                      tf.constant(params.train.learning_rate.start_value))
+                else:
+                    raise RuntimeError("Unknown learning rate: %s" % params.train.learning_rate.type)
+                tf.summary.scalar('hyper_params/lr/learning_rate', learning_rate)
 
-            # Setup Optimizer
-            train_op = None
-            if params.train.optimizer.type == "sgd":
-                train_op = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(loss,
-                                                                                                global_step=global_step)
-            elif params.train.optimizer.type == "rmsprop":
-                decay = params.train.optimizer.get_or_default("decay", 0.9)
-                momentum = params.train.optimizer.get_or_default("momentum", 0.0)
-                epsilon = params.train.optimizer.get_or_default("epsilon", 1e-10)
-                train_op = tf.train.RMSPropOptimizer(learning_rate=learning_rate, decay=decay, momentum=momentum,
-                                                     epsilon=epsilon).minimize(loss, global_step=global_step)
-            elif params.train.optimizer.type == "adadelta":
-                rho = params.train.optimizer.get_or_default("rho", 0.95)
-                epsilon = params.train.optimizer.get_or_default("epsilon", 1e-08)
-                train_op = tf.train.AdadeltaOptimizer(learning_rate=learning_rate, rho=rho,
+                # Setup Optimizer
+                train_op = None
+                if params.train.optimizer.type == "sgd":
+                    train_op = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(loss,
+                                                                                                    global_step=global_step)
+                elif params.train.optimizer.type == "rmsprop":
+                    decay = params.train.optimizer.get_or_default("decay", 0.9)
+                    momentum = params.train.optimizer.get_or_default("momentum", 0.0)
+                    epsilon = params.train.optimizer.get_or_default("epsilon", 1e-10)
+                    train_op = tf.train.RMSPropOptimizer(learning_rate=learning_rate, decay=decay, momentum=momentum,
+                                                         epsilon=epsilon).minimize(loss, global_step=global_step)
+                elif params.train.optimizer.type == "adadelta":
+                    rho = params.train.optimizer.get_or_default("rho", 0.95)
+                    epsilon = params.train.optimizer.get_or_default("epsilon", 1e-08)
+                    train_op = tf.train.AdadeltaOptimizer(learning_rate=learning_rate, rho=rho,
+                                                          epsilon=epsilon).minimize(loss, global_step=global_step)
+                elif params.train.optimizer.type == "adagrad":
+                    initial_accumulator_value = params.train.optimizer.get_or_default("initial_accumulator_value", 0.1)
+                    train_op = tf.train.AdagradOptimizer(learning_rate=learning_rate,
+                                                         initial_accumulator_value=initial_accumulator_value).minimize(loss,
+                                                                                                    global_step=global_step)
+                elif params.train.optimizer.type == "adam":
+                    beta1 = params.train.optimizer.get_or_default("beta1", 0.9)
+                    beta2 = params.train.optimizer.get_or_default("beta2", 0.999)
+                    epsilon = params.train.optimizer.get_or_default("epsilon", 1e-08)
+                    train_op = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=beta1, beta2=beta2,
                                                       epsilon=epsilon).minimize(loss, global_step=global_step)
-            elif params.train.optimizer.type == "adagrad":
-                initial_accumulator_value = params.train.optimizer.get_or_default("initial_accumulator_value", 0.1)
-                train_op = tf.train.AdagradOptimizer(learning_rate=learning_rate,
-                                                     initial_accumulator_value=initial_accumulator_value).minimize(loss,
-                                                                                                global_step=global_step)
-            elif params.train.optimizer.type == "adam":
-                beta1 = params.train.optimizer.get_or_default("beta1", 0.9)
-                beta2 = params.train.optimizer.get_or_default("beta2", 0.999)
-                epsilon = params.train.optimizer.get_or_default("epsilon", 1e-08)
-                train_op = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=beta1, beta2=beta2,
-                                                  epsilon=epsilon).minimize(loss, global_step=global_step)
-            else:
-                raise RuntimeError("Unknown optimizer: %s" % params.train.optimizer.type)
+                else:
+                    raise RuntimeError("Unknown optimizer: %s" % params.train.optimizer.type)
 
-            hooks = [DefaultLossCallback(params, losses, chkpt_path, mode="train",
-                                         report_storage=report_storage, inline_plotting=inline_plotting)]
-            return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op, training_hooks=hooks)
+                hooks = [DefaultLossCallback(params, losses, chkpt_path, mode="train",
+                                             report_storage=report_storage, inline_plotting=inline_plotting)]
+                return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op, training_hooks=hooks)
 
         raise RuntimeError("Unexpected mode.")
 
@@ -132,7 +135,7 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
         os.makedirs(chkpt_path)
 
     # Load training data
-    print("Loading data")
+    print("Load data")
     train_dataset = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_TRAIN),
                                     hyper_params.train.batch_size)
     validation_dataset = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_VALIDATION),
@@ -182,6 +185,8 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
                                         max_steps=hyper_params.train.steps)
     eval_spec = tf.estimator.EvalSpec(input_fn=validation_dataset,
                                       throttle_secs=throttle_secs)
+
+    print("Start training")
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 
     return estimator

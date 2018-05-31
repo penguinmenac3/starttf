@@ -65,7 +65,9 @@ def multi_output_layer(op):
 
 class Network(object):
 
-    def __init__(self, inputs, weight_file=None, ignore_missing=True, trainable=True):
+    def __init__(self, inputs, weight_file=None, ignore_missing=True, trainable=True, verbose=False):
+        self.verbose = verbose
+
         # The input nodes for this network
         self.inputs = inputs
         # The current list of terminal nodes
@@ -100,7 +102,8 @@ class Network(object):
                 data = data_dict[k]
                 op_name = "_".join(k.split("_")[:-1])
                 param_name = "weights" if k.split("_")[-1] == "W" else "biases"
-                print("Loaded: {} {}".format(op_name, param_name))
+                if self.verbose:
+                    print("Loaded: {} {}".format(op_name, param_name))
                 if op_name not in self.weights:
                     self.weights[op_name] = {}
                 self.weights[op_name][param_name] = data
@@ -109,7 +112,8 @@ class Network(object):
             for op_name in data_dict:
                 with tf.variable_scope(op_name, reuse=True):
                     for param_name, data in data_dict[op_name].iteritems():
-                        print("Loaded: {} {}".format(op_name, param_name))
+                        if self.verbose:
+                            print("Loaded: {} {}".format(op_name, param_name))
                         if op_name not in self.weights:
                             self.weights[op_name] = {}
                         self.weights[op_name][param_name] = data
@@ -145,7 +149,8 @@ class Network(object):
     def make_var(self, op_name, name, shape):
         '''Creates a new TensorFlow variable.'''
         if op_name in self.weights and name in self.weights[op_name]:
-            print("Using: {} {}".format(op_name, name))
+            if self.verbose:
+                print("Using: {} {}".format(op_name, name))
             initializer = tf.constant(self.weights[op_name][name], shape=shape)
             return tf.get_variable(name, initializer=initializer, trainable=self.trainable)
         return tf.get_variable(name, shape, trainable=self.trainable)
