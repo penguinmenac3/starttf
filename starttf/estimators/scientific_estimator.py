@@ -149,7 +149,7 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
 
     # Create a run configuration
     config = None
-    if "distributed" in hyper_params.train.__dict__ and hyper_params.train.distributed:
+    if hyper_params.train.get_or_default("distributed", False):
         distribution = tf.contrib.distribute.MirroredStrategy()
         config = tf.estimator.RunConfig(model_dir=chkpt_path,
                                         save_summary_steps=hyper_params.train.summary_steps,
@@ -166,7 +166,7 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
 
     # Create the estimator.
     estimator = None
-    if "warm_start_checkpoint" in hyper_params.train.__dict__:
+    if hyper_params.train.get_or_default("warm_start_checkpoint", None) is not None:
         warm_start_dir = hyper_params.train.warm_start_checkpoint
         estimator = tf.estimator.Estimator(estimator_spec,
                                            config=config,
@@ -178,9 +178,7 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
                                            params=hyper_params)
 
     # Specify training and actually train.
-    throttle_secs = 120
-    if "throttle_secs" in hyper_params.train.__dict__:
-        throttle_secs = hyper_params.train.throttle_secs
+    throttle_secs = hyper_params.train.get_or_default("throttle_secs", 120)
     train_spec = tf.estimator.TrainSpec(input_fn=train_dataset,
                                         max_steps=hyper_params.train.steps)
     eval_spec = tf.estimator.EvalSpec(input_fn=validation_dataset,
