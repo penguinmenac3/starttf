@@ -43,3 +43,11 @@ class Dict2Obj(object):
         :return: The value from the dict or the default.
         """
         return self.__dict__[key] if key in self.__dict__ else default
+
+    def get_or_dummy(self, key):
+        """
+        Get the value specified in the dictionary or a dummy.
+        :param key: The key which should be retrieved.
+        :return: The value from the dict or a dummy.
+        """
+        return self.__dict__[key] if key in self.__dict__ else Dict2Obj({})
