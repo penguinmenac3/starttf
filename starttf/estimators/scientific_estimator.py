@@ -190,22 +190,24 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
     return estimator
 
 
-def create_prediction_estimator(hyper_params, create_model):
+def create_prediction_estimator(hyper_params, create_model, checkpoint_path=None):
     """
     Create an estimator for prediction purpose only.
     :param hyper_params: The hyper params file.
     :param create_model: The create model function.
+    :param checkpoint_path: (Optional) Path to the specific checkpoint to use.
     :return:
     """
-    chkpts = sorted([name for name in os.listdir(hyper_params.train.checkpoint_path)])
-    chkpt_path = hyper_params.train.checkpoint_path + "/" + chkpts[-1]
-    print("Latest found checkpoint: {}".format(chkpt_path))
+    if checkpoint_path is None:
+        chkpts = sorted([name for name in os.listdir(hyper_params.train.checkpoint_path)])
+        checkpoint_path = hyper_params.train.checkpoint_path + "/" + chkpts[-1]
+        print("Latest found checkpoint: {}".format(checkpoint_path))
 
-    estimator_spec = create_tf_estimator_spec(chkpt_path, create_model, create_loss=None)
+    estimator_spec = create_tf_estimator_spec(checkpoint_path, create_model, create_loss=None)
 
     # Create the estimator.
     estimator = tf.estimator.Estimator(estimator_spec,
-                                       model_dir=chkpt_path,
+                                       model_dir=checkpoint_path,
                                        params=hyper_params)
 
     return estimator
