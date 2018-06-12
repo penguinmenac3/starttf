@@ -54,7 +54,7 @@ def create_model(input_tensor, mode, hyper_params):
         print(net.get_shape())
 
         if not hyper_params.vgg16.encoder_only:
-            net = tf.layers.conv2d(inputs=net, filters=4096, kernel_size=(1, 1), strides=(1, 1), name="fc1", activation=tf.nn.relu)
+            net = tf.layers.conv2d(inputs=net, filters=4096, kernel_size=(7, 7), strides=(1, 1), name="fc1", activation=tf.nn.relu)
             model["vgg16/fc1"] = net
             net = tf.layers.conv2d(inputs=net, filters=4096, kernel_size=(1, 1), strides=(1, 1), name="fc2", activation=tf.nn.relu)
             model["vgg16/fc2"] = net
