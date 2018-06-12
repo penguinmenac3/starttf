@@ -15,6 +15,8 @@ def tile_2d(input, k_x, k_y, name, reorder_required=True):
     size = input.get_shape().as_list()
     c, h, w = size[3], size[1], size[2]
     batch_size = size[0]
+    if batch_size is None:
+        batch_size = -1
 
     # Check if tiling is possible and define output shape.
     assert c % (k_x * k_y) == 0
