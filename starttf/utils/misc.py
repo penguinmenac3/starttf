@@ -1,4 +1,10 @@
+import sys
 import tensorflow as tf
+PYTHON_VERSION = sys.version_info[0]
+if PYTHON_VERSION == 2:
+    from urllib import urlretrieve
+elif PYTHON_VERSION == 3:
+    from urllib.request import urlretrieve
 
 
 def mode_to_str(mode):
@@ -20,3 +26,13 @@ def merge_two_dicts(x, y):
     z = x.copy()   # start with x's keys and values
     z.update(y)    # modifies z with y's keys and values & returns None
     return z
+
+
+def download(url, filename):
+    """
+    Download the url into a file.
+    :param url: The url where to get the weights.
+    :param filename: The filename where to store it.
+    :return:
+    """
+    urlretrieve(url, filename)

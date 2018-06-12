@@ -33,6 +33,16 @@ class Vgg16Encoder(Network):
              .max_pool(2, 2, 2, 2, name='pool5'))
 
 
+def download_weights(weights_folder="weights"):
+    """
+    Download the weights for the model into the weights folder.
+    :return:
+    """
+    from starttf.utils.misc import download
+    import os
+    download("https://www.cs.toronto.edu/~frossard/vgg16/vgg16_weights.npz", os.path.join(weights_folder, "vgg16.npz"))
+
+
 def create_model(input_tensor, mode, hyper_params):
     """
     A vgg16 encoder network taken which can load caffe converted weights.
