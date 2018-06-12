@@ -2,8 +2,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-from starttf.utils.hyperparams import load_params
-from starttf.models.utils import load_graph
+from utils.model_io import load_graph
 from starttf.examples.gru_function_classifier.prepare_training import sin_fn
 
 

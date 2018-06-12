@@ -1,5 +1,5 @@
 # Import model and loss
-from starttf.models.gru_function_classifier import create_model
+from examples.gru_function_classifier.gru_function_classifier import create_model
 from starttf.examples.gru_function_classifier.loss import create_loss
 
 # Import utility functions for training and hyper parameter management.

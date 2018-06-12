@@ -1,5 +1,5 @@
 # Import model and loss
-from starttf.models.mnist import create_model
+from examples.mnist.mnist import create_model
 from starttf.examples.mnist.loss import create_loss
 
 # Import utility functions for training and hyper parameter management.

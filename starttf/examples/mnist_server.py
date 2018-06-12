@@ -1,7 +1,7 @@
 import json, argparse, time
 
 import tensorflow as tf
-from starttf.models.utils import load_graph
+from utils.model_io import load_graph
 
 from flask import Flask, request
 from flask_cors import CORS
