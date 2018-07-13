@@ -68,7 +68,7 @@ Every model returns a dictionary containing output tensors.
 
 More non famous models by myself:
 
-1. [CNN for MNIST (Digit Recognition)](starttf/models/mnist.py)
+1. [CNN for MNIST (Digit Recognition)](starttf/examples/mnist/mnist.py)
 2. [GRU Function Classifier](starttf/models/gru_function_classifier.py)
 3. CNN for LFW (Person Identification) [TODO]
 
@@ -112,7 +112,7 @@ easy_train_and_evaluate(hyper_params, mnist_model, create_loss)
 
 ### Quick Model Definition
 
-Full sample [here](https://github.com/penguinmenac3/starttf/blob/master/starttf/models/mnist.py).
+Full sample [here](https://github.com/penguinmenac3/starttf/blob/master/starttf/examples/mnist/mnist.py).
 
 Simply implement a create_model function.
 This model is only a feed forward model.
