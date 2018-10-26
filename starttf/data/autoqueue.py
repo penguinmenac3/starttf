@@ -23,15 +23,13 @@
 import tensorflow as tf
 
 
-def get_default_config(gpu_memory_usage=0.75, allow_growth=False):
+def create_input_function(hyper_params, sequence, num_threads):
     """
-    A helper to create sessions easily.
-    :param gpu_memory_usage: How much of the gpu should be used for your project.
-    :param allow_growth: If you want to have a fixed gpus size or if it should grow and use just as much as it needs.
-    :return: A configuration you can pass to your session when creating it.
-    """
-    config = tf.ConfigProto()
-    config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_usage
-    config.gpu_options.allow_growth = allow_growth
+    Creates an input function from a sequence.
 
-    return config
+    :param hyper_params: The hyper parameters required for writing {"problem": {"augmentation": {"steps": Int}}}
+    :param sequence: A tf.keras.utils.sequence.
+    :param num_threads: The number of threads. (Recommended: 4 for training and 2 for validation seems to works nice)
+    :return:
+    """
+    raise NotImplementedError("Not yet implemented.")

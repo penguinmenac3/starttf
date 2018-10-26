@@ -20,18 +20,37 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import tensorflow as tf
+import socket, ssl
 
+def handle(conn):
+    fh = conn.makefile()
+    while True:
+        msg = fh.readline().decode("utf-8")
+        if msg == "DONE TRAINING":
+            return True
+        print(msg)
+        if msg.startswith("ERROR"):
+            return False
+    return True
 
-def get_default_config(gpu_memory_usage=0.75, allow_growth=False):
-    """
-    A helper to create sessions easily.
-    :param gpu_memory_usage: How much of the gpu should be used for your project.
-    :param allow_growth: If you want to have a fixed gpus size or if it should grow and use just as much as it needs.
-    :return: A configuration you can pass to your session when creating it.
-    """
-    config = tf.ConfigProto()
-    config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_usage
-    config.gpu_options.allow_growth = allow_growth
+def send_remote(command, fun, params, host, port, password):
+    ret_val = False
+    sock = socket.socket(socket.AF_INET)
+    context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+    context.options |= ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1  # optional
+    conn = context.wrap_socket(sock, server_hostname=host)
+    try:
+        conn.connect((host, port))
+        handshake = "handshake " + password + "\n"
+        conn.write(handshake.encode("utf-8"))
+        if command == "start":
+            msg = "start " + pickle.dumps((fun, params)) + "\n"
+            conn.write(msg.encode("utf-8"))
+        else:
+            msg = command + "\n"
+            conn.write(msg.encode("utf-8"))
+        ret_val = handle(conn)
+    finally:
+        conn.close()
 
-    return config
+    return ret_val

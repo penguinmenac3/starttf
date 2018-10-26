@@ -1,16 +1,16 @@
 .idea
+.torchwood
 .vscode
 datasets
 checkpoints
 tfrecords
 weights
-checkpoints.lnk
-datasets.lnk
-tfrecords.lnk
-weights.lnk
 
-startkeras/models/weights/*
-nonpublic/*
+*.code-workspace
+Tensorboard.bat
+.vs
+*.pyproj
+*.sln
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

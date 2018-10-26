@@ -1,3 +1,25 @@
+# MIT License
+# 
+# Copyright (c) 2018 Michael Fuerst
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 import os
 import time
 import datetime
@@ -6,22 +28,27 @@ import json
 import tensorflow as tf
 
 from starttf.utils.plot_losses import DefaultLossCallback
+from starttf.utils.session_config import get_default_config
 
-from starttf.tfrecords.autorecords import create_input_fn, PHASE_TRAIN, PHASE_VALIDATION
+from starttf.data.autorecords import create_input_fn, PHASE_TRAIN, PHASE_VALIDATION
+from starttf.utils.create_optimizer import create_optimizer
 
 
-def create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plotting=False):
+def create_tf_estimator_spec(chkpt_path, Model, create_loss, inline_plotting=False):
     report_storage = {}
 
     def my_model_fn(features, labels, mode, params):
+        is_mode_training = mode == tf.estimator.ModeKeys.TRAIN
+
         # Create a model
-        model = create_model(features, mode, params)
+        model = Model(params)
+        tf_model = model.create_tf_model(features, training=is_mode_training)
 
         if mode == tf.estimator.ModeKeys.PREDICT:
-            return tf.estimator.EstimatorSpec(mode, predictions=model)
+            return tf.estimator.EstimatorSpec(mode, predictions=tf_model)
 
         # Add a loss
-        losses, metrics = create_loss(model, labels, mode, params)
+        losses, metrics = create_loss(tf_model, labels, mode, params)
         loss = losses["loss"]
 
         for k in losses.keys():
@@ -35,53 +62,8 @@ def create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plott
         with tf.variable_scope("optimizer"):
             # Define a training operation
             if mode == tf.estimator.ModeKeys.TRAIN:
-                learning_rate = None
-                global_step = tf.train.get_global_step()
-                if params.train.learning_rate.type == "exponential":
-                    learning_rate = tf.train.exponential_decay(params.train.learning_rate.start_value, global_step,
-                                                               params.train.steps,
-                                                               params.train.learning_rate.end_value / params.train.learning_rate.start_value,
-                                                               staircase=False, name="lr_decay")
-                    tf.summary.scalar('hyper_params/lr/start_value',
-                                      tf.constant(params.train.learning_rate.start_value))
-                    tf.summary.scalar('hyper_params/lr/end_value', tf.constant(params.train.learning_rate.end_value))
-                elif params.train.learning_rate.type == "const":
-                    learning_rate = tf.constant(params.train.learning_rate.start_value, dtype=tf.float32)
-                    tf.summary.scalar('hyper_params/lr/start_value',
-                                      tf.constant(params.train.learning_rate.start_value))
-                else:
-                    raise RuntimeError("Unknown learning rate: %s" % params.train.learning_rate.type)
-                tf.summary.scalar('hyper_params/lr/learning_rate', learning_rate)
-
-                # Setup Optimizer
-                train_op = None
-                if params.train.optimizer.type == "sgd":
-                    train_op = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(loss,
-                                                                                                    global_step=global_step)
-                elif params.train.optimizer.type == "rmsprop":
-                    decay = params.train.optimizer.get_or_default("decay", 0.9)
-                    momentum = params.train.optimizer.get_or_default("momentum", 0.0)
-                    epsilon = params.train.optimizer.get_or_default("epsilon", 1e-10)
-                    train_op = tf.train.RMSPropOptimizer(learning_rate=learning_rate, decay=decay, momentum=momentum,
-                                                         epsilon=epsilon).minimize(loss, global_step=global_step)
-                elif params.train.optimizer.type == "adadelta":
-                    rho = params.train.optimizer.get_or_default("rho", 0.95)
-                    epsilon = params.train.optimizer.get_or_default("epsilon", 1e-08)
-                    train_op = tf.train.AdadeltaOptimizer(learning_rate=learning_rate, rho=rho,
-                                                          epsilon=epsilon).minimize(loss, global_step=global_step)
-                elif params.train.optimizer.type == "adagrad":
-                    initial_accumulator_value = params.train.optimizer.get_or_default("initial_accumulator_value", 0.1)
-                    train_op = tf.train.AdagradOptimizer(learning_rate=learning_rate,
-                                                         initial_accumulator_value=initial_accumulator_value).minimize(loss,
-                                                                                                    global_step=global_step)
-                elif params.train.optimizer.type == "adam":
-                    beta1 = params.train.optimizer.get_or_default("beta1", 0.9)
-                    beta2 = params.train.optimizer.get_or_default("beta2", 0.999)
-                    epsilon = params.train.optimizer.get_or_default("epsilon", 1e-08)
-                    train_op = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=beta1, beta2=beta2,
-                                                      epsilon=epsilon).minimize(loss, global_step=global_step)
-                else:
-                    raise RuntimeError("Unknown optimizer: %s" % params.train.optimizer.type)
+                optimizer, global_step = create_optimizer(params)
+                train_op = optimizer.minimize(loss, global_step=global_step)
 
                 hooks = [DefaultLossCallback(params, losses, chkpt_path, mode="train",
                                              report_storage=report_storage, inline_plotting=inline_plotting)]
@@ -92,7 +74,10 @@ def create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plott
     return my_model_fn
 
 
-def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plotting=False, continue_training=False):
+def easy_train_and_evaluate(hyper_params, Model, create_loss,
+                            training_data=None, validation_data=None,
+                            inline_plotting=False, session_config=None, log_suffix=None, 
+                            continue_training=False, continue_with_specific_checkpointpath=None):
     """
     Train and evaluate your model without any boilerplate code.
 
@@ -117,16 +102,26 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
         }
     3) Pass everything required to this method and that's it.
     :param hyper_params: The hyper parameters obejct loaded via starttf.utils.hyper_params.load_params
-    :param create_model: A create_model function like that in starttf.models.mnist.
+    :param Model: A keras model.
     :param create_loss: A create_loss function like that in starttf.examples.mnist.loss.
     :param inline_plotting: When you are using jupyter notebooks you can tell it to plot the loss directly inside the notebook.
     :param continue_training: Bool, continue last training in the checkpoint path specified in the hyper parameters.
+    :param session_config: A configuration for the session.
+    :param log_suffix: A suffix for the log folder, so you can remember what was special about the run.
     :return:
     """
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
     chkpt_path = hyper_params.train.checkpoint_path + "/" + time_stamp
+    if log_suffix is not None:
+        chkpt_path = chkpt_path + "_" + log_suffix
 
-    if continue_training:
+    if session_config is None:
+        session_config = get_default_config()
+
+    if continue_with_specific_checkpointpath:
+        chkpt_path = hyper_params.train.checkpoint_path + "/" + continue_with_specific_checkpointpath
+        print("Continue with checkpoint: {}".format(chkpt_path))
+    elif continue_training:
         chkpts = sorted([name for name in os.listdir(hyper_params.train.checkpoint_path)])
         chkpt_path = hyper_params.train.checkpoint_path + "/" + chkpts[-1]
         print("Latest found checkpoint: {}".format(chkpt_path))
@@ -136,20 +131,22 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
 
     # Load training data
     print("Load data")
-    train_dataset = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_TRAIN),
-                                    hyper_params.train.batch_size)
-    validation_dataset = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_VALIDATION),
-                                         hyper_params.train.batch_size)
+    if training_data is None:
+        training_data = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_TRAIN),
+                                        hyper_params.train.batch_size)
+    if validation_data is None:
+        validation_data = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_VALIDATION),
+                                          hyper_params.train.batch_size)
 
     # Write hyper parameters to be able to track what config you had.
     with open(chkpt_path + "/hyperparameters.json", "w") as json_file:
         json_file.write(json.dumps(hyper_params.to_dict(), indent=4, sort_keys=True))
 
-    estimator_spec = create_tf_estimator_spec(chkpt_path, create_model, create_loss, inline_plotting)
+    estimator_spec = create_tf_estimator_spec(chkpt_path, Model, create_loss, inline_plotting)
 
     # Create a run configuration
     config = None
-    if hyper_params.train.get_or_default("distributed", False):
+    if hyper_params.train.get("distributed", False):
         distribution = tf.contrib.distribute.MirroredStrategy()
         config = tf.estimator.RunConfig(model_dir=chkpt_path,
                                         save_summary_steps=hyper_params.train.summary_steps,
@@ -158,7 +155,8 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
                                         keep_checkpoint_max=hyper_params.train.keep_checkpoint_max,
                                         keep_checkpoint_every_n_hours=1)
     else:
-        config = tf.estimator.RunConfig(model_dir=chkpt_path,
+        config = tf.estimator.RunConfig(session_config=session_config,
+                                        model_dir=chkpt_path,
                                         save_summary_steps=hyper_params.train.summary_steps,
                                         save_checkpoints_steps=hyper_params.train.save_checkpoint_steps,
                                         keep_checkpoint_max=hyper_params.train.keep_checkpoint_max,
@@ -166,7 +164,7 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
 
     # Create the estimator.
     estimator = None
-    if hyper_params.train.get_or_default("warm_start_checkpoint", None) is not None:
+    if hyper_params.train.get("warm_start_checkpoint", None) is not None:
         warm_start_dir = hyper_params.train.warm_start_checkpoint
         estimator = tf.estimator.Estimator(estimator_spec,
                                            config=config,
@@ -178,10 +176,10 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
                                            params=hyper_params)
 
     # Specify training and actually train.
-    throttle_secs = hyper_params.train.get_or_default("throttle_secs", 120)
-    train_spec = tf.estimator.TrainSpec(input_fn=train_dataset,
+    throttle_secs = hyper_params.train.get("throttle_secs", 120)
+    train_spec = tf.estimator.TrainSpec(input_fn=training_data,
                                         max_steps=hyper_params.train.steps)
-    eval_spec = tf.estimator.EvalSpec(input_fn=validation_dataset,
+    eval_spec = tf.estimator.EvalSpec(input_fn=validation_data,
                                       throttle_secs=throttle_secs)
 
     print("Start training")
@@ -190,11 +188,11 @@ def easy_train_and_evaluate(hyper_params, create_model, create_loss, inline_plot
     return estimator
 
 
-def create_prediction_estimator(hyper_params, create_model, checkpoint_path=None):
+def create_prediction_estimator(hyper_params, model, checkpoint_path=None):
     """
     Create an estimator for prediction purpose only.
     :param hyper_params: The hyper params file.
-    :param create_model: The create model function.
+    :param model: The keras model.
     :param checkpoint_path: (Optional) Path to the specific checkpoint to use.
     :return:
     """
@@ -203,7 +201,7 @@ def create_prediction_estimator(hyper_params, create_model, checkpoint_path=None
         checkpoint_path = hyper_params.train.checkpoint_path + "/" + chkpts[-1]
         print("Latest found checkpoint: {}".format(checkpoint_path))
 
-    estimator_spec = create_tf_estimator_spec(checkpoint_path, create_model, create_loss=None)
+    estimator_spec = create_tf_estimator_spec(checkpoint_path, model, create_loss=None)
 
     # Create the estimator.
     estimator = tf.estimator.Estimator(estimator_spec,

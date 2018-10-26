@@ -1,17 +1,11 @@
-# starttf - Deeplearning Starterkit for Tensorflow [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+# starttf - Simplified Deeplearning for Tensorflow [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 This repo aims to contain everything required to quickly develop a deep neural network with tensorflow.
-If I can find it the models will also contain pretrained weights.
-The idea is that if you use existing dataset loaders and networks and only modify them, you will automatically obey best practices and have super fast training speeds.
-
-## Writing your own models
-
-See section 'Simple to use tensorflow' at the end of this document.
-
+The idea is that if you use write a compatible SimpleSequence for data loading and networks based on the StartTFModel, you will automatically obey best practices and have super fast training speeds.
 
 ## Install
 
-Properly install tensorflow-gpu please follow the [official instructions](https://www.tensorflow.org/install/) carefully.
+Properly install `tensorflow` or `tensorflow-gpu` please follow the [official instructions](https://www.tensorflow.org/install/) carefully.
 
 Then, simply pip install from the github repo.
 
@@ -19,72 +13,22 @@ Then, simply pip install from the github repo.
 pip install starttf
 ```
 
-### Optional Recommendations
-
-For simple dataset access install opendatalake.
-
-```bash
-pip install opendatalake
-```
-
-## Running examples
-
-You can launch your code from the command line like the example.
-
-```bash
-# Activate your virtual environment (in my case venv)
-# Then do the following
-(venv) $ python -m starttf.examples.mnist.prepare_training
-(venv) $ python -m starttf.examples.mnist.train
-```
-
 ## Datasets
 
-For dataset support you can write your own generators or use opendatalake library including bindings to load many popular datasets in a unified format.
-For details checkout the readme of opendatalake [**here**](https://github.com/penguinmenac3/opendatalake/blob/master/README.md).
+Extensions SimpleSequences from [opendatalake.simple_sequence.SimpleSequence](https://github.com/penguinmenac3/opendatalake/blob/master/opendatalake/simple_sequence.py) are supported.
+They work like keras.Sequence however with an augmentation and a preprocessing function.
+
+For details checkout the [readme of opendatalake](https://github.com/penguinmenac3/opendatalake/blob/master/README.md).
 
 ## Models
 
-There are some models implemented to tinker around with.
-Most of the implementations are not done by me from scratch but rather refactoring of online found implementations.
-Also the common models will come with pre trained weights I found on the internet.
-Just check the comment at the top of their source files.
+Every model returns a dictionary containing output tensors and a dictionary containing debug tensors
 
-### Tensorflow Models
-
-Every model returns a dictionary containing output tensors.
-
-1. [Alexnet (single stream version)](starttf/models/alexnet.py)
-2. [VGG 16](starttf/models/vgg16.py)
-3. [VGG 16 pretrained](starttf/models/vgg16_encoder.py)
-4. [GoogLeNet (Inception v3)](starttf/models/inception_v3.py)
-5. [GoogLeNet Encoder (Inception v3)](starttf/models/inception_v3_encoder.py)
-6. Overfeat/Tensorbox [TODO]
-7. ResNet [TODO]
-8. SegNet [TODO]
-9. Mask RCNN [TODO]
-10. monoDepth [TODO]
-11. [TF Hub Wrapper](starttf/models/tf_hub_wrapper.py)
-
-More non famous models by myself:
-
-1. [CNN for MNIST (Digit Recognition)](starttf/examples/mnist/mnist.py)
-2. [GRU Function Classifier](starttf/models/gru_function_classifier.py)
-3. CNN for LFW (Person Identification) [TODO]
-
-### Tensorflow Examples
-
-1. [MNIST](starttf/examples/mnist)
-2. LFW [TODO]
-3. Imagenet (Baselines) [TODO]
-4. Bounding Box Regression [TODO]
-5. Segmentations [TODO]
-6. Instance Masks [TODO]
-7. Reinforcement Learning [TODO]
-8. [GRU Function Classifier](starttf/examples/gru_function_classifier)
+1. [Model Base Classes](starttf/models/models.py)
+2. [Common Encoders](starttf/models/encoders.py)
+3. [Untrained Backbones](starttf/models/backbones)
 
 ## Simple to use tensorflow
-
 
 ### Simple Training (No Boilerplate)
 
@@ -94,43 +38,64 @@ This is actually a full main file.
 
 ```python
 # Import helpers
-from starttf.estimators.scientific_estimator import easy_train_and_evaluate
+from starttf.estimators.tf_estimator import easy_train_and_evaluate
 from starttf.utils.hyperparams import load_params
 
 # Import a/your model (here one for mnist)
-from starttf.models.mnist import create_model
+from mymodel import MyStartTFModel
 
 # Import your loss (here an example)
-from starttf.examples.mnist.loss import create_loss
+from myloss import create_loss
 
 # Load params (here for mnist)
-hyper_params = load_params("starttf/examples/mnist/hyper_params.json")
+hyperparams = load_params("hyperparams/experiment1.json")
 
 # Train model
-easy_train_and_evaluate(hyper_params, mnist_model, create_loss)
+easy_train_and_evaluate(hyperparams, MyStartTFModel, create_loss, continue_training=False)
 ```
 
 ### Quick Model Definition
 
-Full sample [here](https://github.com/penguinmenac3/starttf/blob/master/starttf/examples/mnist/mnist.py).
-
 Simply implement a create_model function.
 This model is only a feed forward model.
 
-The model function returns a dictionary containing all layers that should be accessible from outside and a feed_dict prepopulated with e.g. hidden states for rnns.
+The model function returns a dictionary containing all layers that should be accessible from outside and a dictionary containing debug values that should be availible for loss or plotting in tensorboard.
 
 ```python
-def create_model(input_tensor, mode, hyper_params):
-    model = {}
-    with tf.variable_scope('MnistNetwork') as scope:
-        model["logits"] = input_tensor  # TODO
-        model["probs"] = tf.nn.softmax(logits=model["logits"], name="probs")
-    return model
+import tensorflow as tf
+
+from starttf.models.model import StartTFModel
+from starttf.models.encoders import Encoder
+
+Conv2D = tf.keras.layers.Conv2D
+
+
+class ExampleModel(StartTFModel):
+    def __init__(self, hyperparams):
+        super(ExampleModel, self).__init__(hyperparams)
+        num_classes = hyperparams.problem.number_of_categories
+
+        # Create the vgg encoder
+        self.encoder = Encoder(hyperparams)
+
+        #Use the generated model 
+        self.conv6 = Conv2D(filters=1024, kernel_size=(1, 1), padding="same", activation="relu")
+        self.conv7 = Conv2D(filters=1024, kernel_size=(1, 1), padding="same", activation="relu")
+        self.conv8 = Conv2D(filters=num_classes, kernel_size=(1, 1), padding="same", activation=None, name="probs")
+
+    def call(self, input_tensor, training=False):
+        """
+        Run the model.
+        """
+        encoder, debug = self.encoder(input_tensor, training)
+        result = self.conv6(encoder["features"])
+        result = self.conv7(result)
+        logits = self.conv8(result)
+        probs = tf.nn.softmax(logits)
+        return {"logits": logits, "probs": probs}, debug
 ```
 
 ### Quick Loss Definition
-
-Full sample [here](https://github.com/penguinmenac3/starttf/blob/master/starttf/examples/mnist/loss.py).
 
 ```python
 def create_loss(model, labels, mode, hyper_params):
@@ -153,27 +118,25 @@ def create_loss(model, labels, mode, hyper_params):
 
 ### Simple TF Record Creation
 
-Full sample [here](https://github.com/penguinmenac3/starttf/blob/master/starttf/examples/mnist/prepare_training.py).
-
 Fast training speed can be achieved by using tf records.
-Actually the api only supports using tf records, to enforce usage for optimal performance.
 However, usually tf records are a hastle to use the write_data method makes it simple.
 
 ```python
+from starttf.utils.hyperparams import load_params
+from starttf.data.autorecords import write_data
+
+from my_data import MySimpleSequence
+
 # Load the hyper parameters.
-hyper_params = load_params("starttf/examples/mnist/hyper_params.json")
+hyperparams = load_params("hyperparams/experiment1.json")
 
 # Get a generator and its parameters
-train_gen, train_gen_params = mnist(base_dir=hyper_params.problem.data_path, phase="train")
-validation_gen, validation_gen_params = mnist(base_dir=hyper_params.problem.data_path, phase="validation")
-
-# Create the paths where to write the records from the hyper parameter file.
-train_record_path = os.path.join(hyper_params.train.tf_records_path, "train")
-validation_record_path = os.path.join(hyper_params.train.tf_records_path, "validation")
+training_data = MySimpleSequence(hyperparams)
+validation_data = MySimpleSequence(hyperparams)
 
 # Write the data
-write_data(hyper_params, train_record_path, train_gen, train_gen_params, 4)
-write_data(hyper_params, validation_record_path, validation_gen, validation_gen_params, 2)
+write_data(hyperparams, PHASE_TRAIN, training_data, 4)
+write_data(hyperparams, PHASE_VALIDATION, validation_data, 2)
 ```
 
 ### Tensorboard Integration
@@ -187,7 +150,3 @@ If you also want debug images, you can add a tf.summary.image() in your create_l
 
 If you use the easy_train_and_evaluate method, a correctly configured TF Estimator is created.
 The estimator is then trained in a way that supports cluster training if you have a cluster.
-
-### More details
-
-More details can be found in starttf/examples or starttf/models. Mnist is a simple example for starters.

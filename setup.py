@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 from codecs import open
 from os import path
 
-__version__ = '0.0.4'
+__version__ = '1.0.0'
 
 here = path.abspath(path.dirname(__file__))
 
@@ -31,7 +31,7 @@ setup(
       'Programming Language :: Python',
     ],
     keywords='',
-    packages=find_packages(exclude=['docs', 'tests*']),
+    packages=find_packages(exclude=['examples', 'docs', 'tests*']),
     include_package_data=True,
     author='Michael Fuerst',
     install_requires=install_requires,

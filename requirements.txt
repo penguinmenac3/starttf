@@ -8,10 +8,11 @@ pandas
 opencv-python
 tensorflow-hub
 jsmin
+opendatalake
 
 # Dev/Deployment
-sphinx
-sphinx_rtd_theme
-nose
-coverage
-pypi-publisher
+#sphinx
+#sphinx_rtd_theme
+#nose
+#coverage
+#pypi-publisher

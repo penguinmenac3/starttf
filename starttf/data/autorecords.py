@@ -1,3 +1,25 @@
+# MIT License
+# 
+# Copyright (c) 2018 Michael Fuerst
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 import os
 import numpy as np
 from multiprocessing import Pool
@@ -5,6 +27,7 @@ import tensorflow as tf
 from os import listdir
 from os.path import isfile, join
 import json
+Sequence = tf.keras.utils.Sequence
 
 PHASE_TRAIN = "train"
 PHASE_VALIDATION = "validation"
@@ -15,49 +38,35 @@ def _bytes_feature(value):
 
 
 def _write_tf_record_pool_helper(args):
-    hyper_params, data, num_threads, i, record_filename, preprocess_feature, preprocess_label, augment_data = args
-    data_fn, data_params = data
+    hyper_params, sequence, num_threads, i, record_filename = args
     thread_name = "%s:thread_%d" % (record_filename, i)
-    _write_tf_record(hyper_params, data_fn, data_params, num_threads, i, record_filename, preprocess_feature, preprocess_label, augment_data, thread_name=thread_name)
+    _write_tf_record(hyper_params, sequence, num_threads, i, record_filename, thread_name=thread_name)
 
 
-def _write_tf_record(hyper_params, data_fn, data_params, num_threads, i, record_filename, preprocess_feature=None, preprocess_label=None, augment_data=None, thread_name="thread"):
+def _write_tf_record(hyper_params, sequence, num_threads, i, record_filename, thread_name="thread"):
     writer = tf.python_io.TFRecordWriter(record_filename)
 
     samples_written = 0
-    augmentation_steps = 1
-    if "problem" in hyper_params.__dict__ and "augmentation" in hyper_params.problem.__dict__:
-        augmentation_steps = hyper_params.problem.augmentation.steps
+    augmentation_steps = hyper_params.problem.augmentation.get("steps", 1)
 
     for i in range(augmentation_steps):
-        data = data_fn(data_params, num_threads, i)
-        for orig_feature, orig_label in data:
-            feature = orig_feature
-            label = orig_label
-            if augment_data is not None:
-                feature, label = augment_data(hyper_params, feature, label)
-            if preprocess_feature is not None:
-                feature = preprocess_feature(hyper_params, feature)
-                if feature is None:
-                    continue
-            if preprocess_label is not None:
-                label = preprocess_label(hyper_params, feature, label)
-                if label is None:
-                    continue
+        for idx in range(i, len(sequence), num_threads):
+            feature_batch, label_batch = sequence[idx]
+            batch_size = feature_batch.values()[0].shape[0]
+            for batch_idx in range(batch_size):
+                feature_dict = {}
 
-            feature_dict = {}
+                for k in feature_batch.keys():
+                    feature_dict['feature_' + k] = _bytes_feature(np.reshape(feature_batch[k][batch_idx], (-1,)).tobytes())
+                for k in label_batch.keys():
+                    feature_dict['label_' + k] = _bytes_feature(np.reshape(label_batch[k][batch_idx], (-1,)).tobytes())
 
-            for k in feature.keys():
-                feature_dict['feature_' + k] = _bytes_feature(np.reshape(feature[k], (-1,)).tobytes())
-            for k in label.keys():
-                feature_dict['label_' + k] = _bytes_feature(np.reshape(label[k], (-1,)).tobytes())
-
-            example = tf.train.Example(features=tf.train.Features(
-                feature=feature_dict))
-            writer.write(example.SerializeToString())
-            samples_written += 1
-            if samples_written % 1000 == 0:
-                print("Samples written by %s: %d." % (thread_name, samples_written))
+                example = tf.train.Example(features=tf.train.Features(
+                    feature=feature_dict))
+                writer.write(example.SerializeToString())
+                samples_written += 1
+                if samples_written % 1000 == 0:
+                    print("Samples written by %s: %d." % (thread_name, samples_written))
     print("Samples written by %s: %d." % (thread_name, samples_written))
     writer.close()
 
@@ -220,58 +229,36 @@ def create_input_fn(prefix, batch_size, augmentation=None):
 
 
 def write_data(hyper_params,
-               prefix,
-               threadable_generator,
-               params,
-               num_threads,
-               preprocess_feature=None,
-               preprocess_label=None,
-               augment_data=None):
+               mode,
+               sequence,
+               num_threads):
     """
     Write a tf record containing a feature dict and a label dict.
 
     :param hyper_params: The hyper parameters required for writing {"problem": {"augmentation": {"steps": Int}}}
-    :param prefix: The path prefix where to store your data. Recomennded is something like "data/.records/mnist/train" and "data/.records/mnist/validation"
-    :param threadable_generator: A generator that supports a nicely threadable api.
-        def gen(params, stride, offset, infinite)
-        and returns a feature dict and a label dict containing a single example.
-    :param params: The parameters for the threadable generator.
+    :param mode: The mode specifies the purpose of the data. Typically it is either "train" or "validation".
+    :param sequence: A tf.keras.utils.sequence.
     :param num_threads: The number of threads. (Recommended: 4 for training and 2 for validation seems to works nice)
-    :param preprocess_feature: A function that transforms the features from the raw dataset generator into something that your network could use.
-        e.g. changing the encoding. (hyper_params, feature dict -> feature dict)
-    :param preprocess_label: A function that transforms the labels from the raw dataset generator into something that your network could use.
-        e.g. one hot encoding. (hyper_params, feature dict, label dict -> label dict)
-    :param augment_data: A method that augments your data. eg random crop, scale, etc. (hyper_params, feature dict, label dict -> feature dict, label dict)
     :return:
     """
+    if not isinstance(sequence, Sequence) and not (callable(getattr(sequence, "__getitem__", None)) and callable(getattr(sequence, "__len__", None))):
+        raise ValueError("sequence must be tf.keras.utils.Sequence or a subtype or implement __len__(self) and __getitem__(self, idx)")
+    prefix = os.path.join(hyper_params.train.get("tf_records_path", "tfrecords"), mode)
     prefix = prefix.replace("\\", "/")
     data_tmp_folder = "/".join(prefix.split("/")[:-1])
     if not os.path.exists(data_tmp_folder):
         os.makedirs(data_tmp_folder)
 
-    args = [(hyper_params, (threadable_generator, params), num_threads, i, (prefix + "_%d.tfrecords") % i,
-                   preprocess_feature, preprocess_label, augment_data) for i in range(num_threads)]
+    args = [(hyper_params, sequence, num_threads, i, (prefix + "_%d.tfrecords") % i) for i in range(num_threads)]
 
-    # Retrieve a single sample
-    data_gen = threadable_generator(params)
-    sample_label = None
-    sample_feature = None
-    while sample_label is None or sample_feature is None:
-        sample_feature, sample_label = next(data_gen)
-
-        # Preprocess samples, so that shapes and dtypes are correct.
-        if augment_data is not None:
-            sample_feature, sample_label = augment_data(hyper_params, sample_feature, sample_label)
-        if preprocess_feature is not None:
-            sample_feature = preprocess_feature(hyper_params, sample_feature)
-        if preprocess_label is not None:
-            sample_label = preprocess_label(hyper_params, sample_feature, sample_label)
+    # Retrieve a single batch
+    sample_feature, sample_label = sequence[0]
 
     config = {"num_threads": num_threads}
     for k in sample_feature.keys():
-        config["feature_" + k] = {"shape": sample_feature[k].shape, "dtype": sample_feature[k].dtype.name}
+        config["feature_" + k] = {"shape": sample_feature[k].shape[1:], "dtype": sample_feature[k].dtype.name}
     for k in sample_label.keys():
-        config["label_" + k] = {"shape": sample_label[k].shape, "dtype": sample_label[k].dtype.name}
+        config["label_" + k] = {"shape": sample_label[k].shape[1:], "dtype": sample_label[k].dtype.name}
 
     with open(prefix + '_config.json', 'w') as outfile:
         json.dump(config, outfile)
