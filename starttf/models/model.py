@@ -26,7 +26,9 @@ import keras
 
 class StartTFPartialModel(object):
     def __init__(self, hyperparams):
+        # Set both since they seem to be not the same
         tf.keras.backend.set_session(tf.get_default_session())
+        keras.backend.set_session(tf.get_default_session())
         self.hyperparams = hyperparams
         self.tensorflow = False
         self.keras = False
