@@ -28,10 +28,17 @@ import json
 import tensorflow as tf
 
 from starttf.utils.session_config import get_default_config
-from starttf.tfrecords.autorecords import create_input_fn, PHASE_TRAIN, PHASE_VALIDATION
+from starttf.data.autorecords import create_input_fn, PHASE_TRAIN, PHASE_VALIDATION
 from starttf.utils.plot_losses import create_keras_callbacks
 from starttf.utils.create_optimizer import create_keras_optimizer
 load_model = tf.keras.models.load_model
+
+
+def rename_fn(fn, name):
+    def tmp(*args, **kwargs):
+        fn(*args, **kwargs)
+    tmp.__name__ = name
+    return tmp
 
 
 def easy_train_and_evaluate(hyper_params, Model, define_loss_fn,
@@ -118,7 +125,7 @@ def easy_train_and_evaluate(hyper_params, Model, define_loss_fn,
         target_placeholders = {k: tf.placeholder(shape=(None,) + train_labels[k].shape[1:], dtype=train_labels[k].dtype, name=k) for k in train_labels}
         model = model.create_keras_model(input_tensor, training=True)
         # model.metrics_names = [k for k in metrics]
-        model.compile(loss=losses, optimizer=optimizer, metrics=[metrics[k] for k in metrics], target_tensors=target_placeholders)
+        model.compile(loss=losses, optimizer=optimizer, metrics=[rename_fn(v, name=k) for k, v in metrics.iteritems()], target_tensors=target_placeholders)
         model.fit(train_features, train_labels, validation_data=validation_data,
                   batch_size=hyper_params.train.batch_size,
                   steps_per_epoch=hyper_params.train.get("steps_per_epoch", 1),

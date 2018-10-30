@@ -21,14 +21,25 @@
 # SOFTWARE.
 
 import tensorflow as tf
+import keras
 
 
 class StartTFPartialModel(object):
     def __init__(self, hyperparams):
         tf.keras.backend.set_session(tf.get_default_session())
         self.hyperparams = hyperparams
+        self.tensorflow = False
+        self.keras = False
 
-    def __call__(self, input_tensor, training=False):
+    def __call__(self, input_tensor, training=False, for_tensorflow=False, for_keras=False):
+        if for_tensorflow:
+            self.tensorflow = True
+        if for_keras:
+            self.keras = True
+        if not self.tensorflow and not self.keras:
+            raise RuntimeError("Your model has no specification if it is for tensorflow or keras, pass the optional arguments.")
+        if self.tensorflow and self.keras:
+            raise RuntimeError("Your model cannot be for keras and tensorflow at the same time. You have to choose one.")
         return self.call(input_tensor, training)
 
     def call(self, input_tensor, training=False):
@@ -53,36 +64,45 @@ class StartTFFromKerasBackbone(StartTFPartialModel):
         assert outputs is not None
         self.outputs = outputs
         layers = [model.get_layer(x).output for x in outputs]
-        self.model = tf.keras.models.Model(inputs=model.inputs,
-                                           outputs=layers)
+        # Using keras and tf.keras seems to make a difference here. tf.keras does not work.
+        self.model = keras.models.Model(inputs=model.inputs,
+                                        outputs=layers)
 
     def call(self, input_tensor, training=False):
         model = {}
         debug = {}
         with tf.variable_scope("backbone"):
+            # Get Input
+            image = input_tensor["image"]
+            if self.tensorflow:
+                image = tf.cast(image, dtype=tf.float32, name="input/cast")
+
             # Create the model
-            image = tf.cast(input_tensor["image"], dtype=tf.float32, name="input/cast")
             backbone = self.model(image)
 
             # Repack as dict for partial model
-            model = {name: backbone.get_layer(name).output for name in self.outputs}
+            if self.keras:
+                model = {name: backbone.get_layer(name).output for name in self.outputs}
+            if self.tensorflow:
+                tmp = dict(zip(self.outputs, backbone))
+                model = {k: tf.identity(feature) for k, feature in tmp.iteritems()}
             debug["image"] = image
         return model, debug
 
 
-class InternalStartTFModel(StartTFPartialModel):
+class StartTFModel(StartTFPartialModel):
     def __init__(self, hyperparams):
-        super(InternalStartTFModel, self).__init__(hyperparams)
+        super(StartTFModel, self).__init__(hyperparams)
 
     def create_tf_model(self, input_tensor, training=False):
         with tf.variable_scope("model"):
-            output_tensors, debug_tensors = self.__call__(input_tensor, training)
+            output_tensors, debug_tensors = self.__call__(input_tensor, training, for_tensorflow=True, for_keras=False)
             output_tensors.update(debug_tensors)
             return output_tensors
 
     def create_keras_model(self, input_tensor, training=False):
         with tf.variable_scope("model"):
-            output_tensors, debug_tensors = self.__call__(input_tensor, training)
+            output_tensors, debug_tensors = self.__call__(input_tensor, training, for_tensorflow=False, for_keras=True)
             output_tensors.update(debug_tensors)
 
             input_tensor_order = sorted(list(input_tensor.keys()))
@@ -92,24 +112,8 @@ class InternalStartTFModel(StartTFPartialModel):
             model = tf.keras.Model(inputs=inputs, outputs=outputs)
             return model
 
-class StartTFModel(InternalStartTFModel):
-    def __init__(self, hyperparams):
-        super(StartTFModel, self).__init__(hyperparams)
 
-    def prepare(self, features, labels):
-        """
-        Transform the features and labels from a dataset into the format the model requires.
-
-        This is part of the model, since a model is capable of predicting it's required output shape best.
-        """
-        raise NotImplementedError("This model does not have a prepare implementation. " +
-                                  "Is it possible that the model is not intended to be used as a stand alone model? " +
-                                  "Or it was just forgotten to implement a prepare(self, features, labels) -> " +
-                                  "(features, labels) function in a class that inherited from StartTFModel.")
-        return features, labels
-
-
-class RLModel(InternalStartTFModel):
+class RLModel(StartTFModel):
     def __init__(self, hyperparams):
         super(RLModel, self).__init__(hyperparams)
         self.model = None
