@@ -9,6 +9,7 @@ opencv-python
 tensorflow-hub
 jsmin
 opendatalake
+GPUtil
 
 # Dev/Deployment
 #sphinx
