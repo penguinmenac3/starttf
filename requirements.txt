@@ -10,6 +10,7 @@ tensorflow-hub
 jsmin
 opendatalake
 GPUtil
+keras
 
 # Dev/Deployment
 #sphinx
