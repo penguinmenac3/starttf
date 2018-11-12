@@ -9,6 +9,8 @@ opencv-python
 tensorflow-hub
 hyperparams
 opendatalake
+GPUtil
+keras
 
 # Dev/Deployment
 #sphinx
