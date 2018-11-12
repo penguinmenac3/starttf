@@ -72,13 +72,12 @@ def export_graph(checkpoint_path, output_nodes):
     return output_graph_def
 
 
-def load_graph(frozen_graph_filename, input_shape, namespace_prefix="", old_input=None):
+def load_graph(frozen_graph_filename, namespace_prefix="", placeholders=None):
     """
     Loads a frozen graph from a *.pb file.
     :param frozen_graph_filename: The file which graph to load.
-    :param input_shape: The shape of the new input you want.
     :param namespace_prefix: A namespace for your graph to live in. This is useful when having multiple models.
-    :param old_input: The name of the old input tensor you want to replace.
+    :param placeholders: A dict containing the new placeholders that replace the old inputs.
     :return: The graph that can now be passed to a session when creating it.
     """
     # Load graph def from protobuff and import the definition
@@ -86,11 +85,10 @@ def load_graph(frozen_graph_filename, input_shape, namespace_prefix="", old_inpu
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
 
-    if old_input is None:
+    if placeholders is None:
         with tf.Graph().as_default() as graph:
             tf.import_graph_def(graph_def, name=namespace_prefix)
     else:
         with tf.Graph().as_default() as graph:
-            tf_new_input = tf.placeholder(tf.float32, shape=input_shape, name="input_tensor")
-            tf.import_graph_def(graph_def, input_map={old_input: tf_new_input}, name=namespace_prefix)
+            tf.import_graph_def(graph_def, input_map=placeholders, name=namespace_prefix)
     return graph

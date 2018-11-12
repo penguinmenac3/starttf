@@ -7,7 +7,7 @@ h5py
 pandas
 opencv-python
 tensorflow-hub
-jsmin
+hyperparams
 opendatalake
 
 # Dev/Deployment

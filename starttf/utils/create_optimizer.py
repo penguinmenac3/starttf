@@ -83,7 +83,6 @@ def create_keras_optimizer(params):
                 initial_lrate = params.train.learning_rate.start_value
                 k = params.train.learning_rate.end_value / params.train.learning_rate.start_value
                 lrate = initial_lrate * math.exp(-k * epoch)
-                print(lrate)
                 return lrate
             lr_fn = exp_decay
             tf.summary.scalar('hyper_params/lr/start_value',
@@ -92,7 +91,6 @@ def create_keras_optimizer(params):
         elif params.train.learning_rate.type == "const":
             def const_lr(epoch):
                 initial_lrate = params.train.learning_rate.start_value
-                print(lrate)
                 return initial_lrate
             lr_fn = const_lr
             tf.summary.scalar('hyper_params/lr/start_value',

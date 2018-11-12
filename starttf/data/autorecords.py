@@ -47,12 +47,12 @@ def _write_tf_record(hyper_params, sequence, num_threads, i, record_filename, th
     writer = tf.python_io.TFRecordWriter(record_filename)
 
     samples_written = 0
-    augmentation_steps = hyper_params.problem.augmentation.get("steps", 1)
+    augmentation_steps = hyper_params["problem"]["augmentation"].get("steps", 1)
 
     for i in range(augmentation_steps):
         for idx in range(i, len(sequence), num_threads):
             feature_batch, label_batch = sequence[idx]
-            batch_size = feature_batch.values()[0].shape[0]
+            batch_size = list(feature_batch.values())[0].shape[0]
             for batch_idx in range(batch_size):
                 feature_dict = {}
 

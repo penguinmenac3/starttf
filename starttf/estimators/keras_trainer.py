@@ -41,7 +41,7 @@ def rename_fn(fn, name):
     return tmp
 
 
-def easy_train_and_evaluate(hyper_params, Model, define_loss_fn,
+def easy_train_and_evaluate(hyper_params, Model, define_loss_fn=None,
                             training_data=None, validation_data=None,
                             continue_training=False,
                             session_config=None, log_suffix=None, continue_with_specific_checkpointpath=None):
@@ -122,7 +122,7 @@ def easy_train_and_evaluate(hyper_params, Model, define_loss_fn,
 
         model = Model(hyper_params)
         input_tensor = {k: tf.keras.layers.Input(shape=train_features[k].get_shape().as_list(), name=k) for k in train_features}
-        target_placeholders = {k: tf.placeholder(shape=(None,) + train_labels[k].shape[1:], dtype=train_labels[k].dtype, name=k) for k in train_labels}
+        target_placeholders = {k: tf.placeholder(shape=(None,) + train_labels[k].shape[1:], dtype=train_labels[k].dtype, name=k + "_placeholder") for k in train_labels}
         model = model.create_keras_model(input_tensor, training=True)
         # model.metrics_names = [k for k in metrics]
         model.compile(loss=losses, optimizer=optimizer, metrics=[rename_fn(v, name=k) for k, v in metrics.iteritems()], target_tensors=target_placeholders)
@@ -140,7 +140,7 @@ def easy_train_and_evaluate(hyper_params, Model, define_loss_fn,
         train_features = training_data[0][0]
         train_labels = training_data[0][1]
         input_tensor = {k: tf.keras.layers.Input(shape=train_features[k].shape[1:], name=k) for k in train_features}
-        target_placeholders = {k: tf.placeholder(shape=(None,) + train_labels[k].shape[1:], dtype=train_labels[k].dtype, name=k) for k in train_labels}
+        target_placeholders = {k: tf.placeholder(shape=(None,) + train_labels[k].shape[1:], dtype=train_labels[k].dtype, name=k + "_placeholder") for k in train_labels}
         model = model.create_keras_model(input_tensor, training=True)
         # model.metrics_names = [k for k in metrics]
         model.compile(loss=losses, optimizer=optimizer, metrics=[metrics[k] for k in metrics], target_tensors=target_placeholders)
