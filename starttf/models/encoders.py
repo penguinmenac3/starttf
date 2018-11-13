@@ -54,3 +54,37 @@ class Encoder(StartTFPartialModel):
         debug["image"] = image
         model["features"] = self.encoder(image, training=training)
         return model, debug
+
+
+class MultiResolutionEncoder(StartTFPartialModel):
+    def __init__(self, hyperparams):
+        super(Encoder, self).__init__(hyperparams)
+        encoder_name = hyperparams.get("encoder", "vgg16")
+        if encoder_name not in ENCODERS:
+            errormsg = "Unknown encoder {}. Please pick one of the following: {}".format(encoder_name, ENCODERS.keys())
+            raise ValueError(errormsg)
+
+        encoder_weights = hyperparams.get("encoder_weights", "imagenet")
+        self.encoder = ENCODERS[encoder_name](weights=encoder_weights, include_top=False)
+        if encoder_name == "resnet50":
+            # FPN Paper style resnet50 encoder
+            C3 = resnet50.get_layer("activation_22").output
+            C4 = resnet50.get_layer("activation_40").output
+            C5 = resnet50.get_layer("activation_49").output
+            self.encoder = tf.keras.Model(inputs=self.encoder.inputs, outputs=[C3, C4, C5])
+        elif encoder_name == "vgg16":
+            # TODO implement for SSD style multires vgg encoder
+            raise NotImplementedError("Not yet implemented.")
+        else:
+            raise RuntimeError("Other encoder networks are not supported.")
+
+    def call(self, input_tensor, training=False):
+        """
+        Run the model.
+        """
+        image = tf.cast(input_tensor["image"], dtype=tf.float32, name="input/cast")
+        model = {}
+        debug = {}
+        debug["image"] = image
+        model["features"] = self.encoder(image, training=training)
+        return model, debug
