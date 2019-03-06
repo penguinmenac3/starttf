@@ -24,6 +24,7 @@ import os
 import time
 import datetime
 import json
+from shutil import copyfile
 
 import tensorflow as tf
 
@@ -74,7 +75,7 @@ def create_tf_estimator_spec(chkpt_path, Model, create_loss, inline_plotting=Fal
     return my_model_fn
 
 
-def easy_train_and_evaluate(hyper_params, Model, create_loss,
+def easy_train_and_evaluate(hyper_params, Model=None, create_loss=None,
                             training_data=None, validation_data=None,
                             inline_plotting=False, session_config=None, log_suffix=None, 
                             continue_training=False, continue_with_specific_checkpointpath=None):
@@ -128,6 +129,18 @@ def easy_train_and_evaluate(hyper_params, Model, create_loss,
 
     if not os.path.exists(chkpt_path):
         os.makedirs(chkpt_path)
+        
+    # If hyperparam config is used, load and save code
+    if Model is None:
+        model_backup = os.path.join(chkpt_path, "model.py")
+        copyfile(hyperparams["arch"]["model"].replace(".", os.sep), model_backup)
+        arch_model = __import__(hyperparams["arch"]["model"], fromlist=["Model"])
+        Model = arch_model.Model
+    if create_loss is None:
+        loss_backup = os.path.join(chkpt_path, "loss.py")
+        copyfile(hyperparams["arch"]["loss"].replace(".", os.sep), loss_backup)
+        arch_loss = __import__(hyperparams["arch"]["loss"], fromlist=["create_loss"])
+        create_loss = arch_loss.create_loss
 
     # Load training data
     print("Load data")
