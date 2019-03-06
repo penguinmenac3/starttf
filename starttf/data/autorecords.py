@@ -21,6 +21,8 @@
 # SOFTWARE.
 
 import os
+from shutil import copyfile
+import filecmp
 import numpy as np
 from multiprocessing import Pool
 import tensorflow as tf
@@ -31,6 +33,37 @@ Sequence = tf.keras.utils.Sequence
 
 PHASE_TRAIN = "train"
 PHASE_VALIDATION = "validation"
+
+
+def easy_tfrecord_prepare(hyperparams):
+    # Generate filenames
+    prepare_file = hyperparams["problem"]["prepare"].replace(".", os.sep)
+    prepare_file_backup = join(hyperparams["train"]["tf_records_path"], "prepare.py")
+    hyperparams_backup = join(hyperparams["train"]["tf_records_path"], "hyperparameters.json")
+
+    # Create output dir if it does not exist
+    if not os.path.exists(hyperparams["train"]["tf_records_path"]):
+        os.makedirs(hyperparams["train"]["tf_records_path"])
+    else:
+        # Check if data is already up to date
+        if filecmp.cmp(prepare_file, prepare_file_backup) and load_params(hyperparams_backup)["problem"] == hyperparams["problem"]:
+            return
+
+    # Copy preparation code to output location and load the module.
+    copyfile(prepare_file, prepare_file_backup)
+    prepare = __import__(hyperparams["problem"]["prepare"], fromlist=["Sequence"])
+
+    # Get a generator and its parameters
+    training_data = prepare.Sequence(hyperparams, PHASE_TRAIN)
+    validation_data = prepare.Sequence(hyperparams, PHASE_VALIDATION)
+
+    # Save the hyperparameters to the output location
+    with open(hyperparams_backup, "w") as json_file:
+        json_file.write(json.dumps(hyperparams.to_dict(), indent=4, sort_keys=True))
+
+    # Write the data
+    write_data(hyperparams, PHASE_TRAIN, training_data, 4)
+    write_data(hyperparams, PHASE_VALIDATION, validation_data, 2)
 
 
 def _bytes_feature(value):
