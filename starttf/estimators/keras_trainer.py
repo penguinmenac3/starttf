@@ -146,6 +146,7 @@ def easy_train_and_evaluate(hyper_params, Model=None, define_loss_fn=None,
         model = model.create_keras_model(input_tensor, training=True)
         # model.metrics_names = [k for k in metrics]
         model.compile(loss=losses, optimizer=optimizer, metrics=[rename_fn(v, name=k) for k, v in metrics.iteritems()], target_tensors=target_placeholders)
+        tf.keras.backend.get_session().run(tf.global_variables_initializer())
         model.fit(train_features, train_labels, validation_data=validation_data,
                   batch_size=hyper_params.train.batch_size,
                   steps_per_epoch=hyper_params.train.get("steps_per_epoch", 1),
@@ -164,6 +165,7 @@ def easy_train_and_evaluate(hyper_params, Model=None, define_loss_fn=None,
         model = model.create_keras_model(input_tensor, training=True)
         # model.metrics_names = [k for k in metrics]
         model.compile(loss=losses, optimizer=optimizer, metrics=[metrics[k] for k in metrics], target_tensors=target_placeholders)
+        tf.keras.backend.get_session().run(tf.global_variables_initializer())
         model.fit_generator(training_data, validation_data=validation_data, epochs=hyper_params.train.get("epochs", 50),
                             callbacks=callbacks, workers=2, use_multiprocessing=False, shuffle=True, verbose=1)
 
