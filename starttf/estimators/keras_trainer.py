@@ -24,14 +24,20 @@ import os
 import time
 import datetime
 import json
+import sys
 
 import tensorflow as tf
+from hyperparams.hyperparams import load_params
 
 from starttf.utils.session_config import get_default_config
 from starttf.data.autorecords import create_input_fn, PHASE_TRAIN, PHASE_VALIDATION
 from starttf.utils.plot_losses import create_keras_callbacks
 from starttf.utils.create_optimizer import create_keras_optimizer
 load_model = tf.keras.models.load_model
+
+
+PHASE_TRAIN = "train"
+PHASE_VALIDATION = "validation"
 
 
 def rename_fn(fn, name):
@@ -41,7 +47,7 @@ def rename_fn(fn, name):
     return tmp
 
 
-def easy_train_and_evaluate(hyper_params, Model, define_loss_fn=None,
+def easy_train_and_evaluate(hyper_params, Model=None, define_loss_fn=None,
                             training_data=None, validation_data=None,
                             continue_training=False,
                             session_config=None, log_suffix=None, continue_with_specific_checkpointpath=None):
@@ -95,6 +101,20 @@ def easy_train_and_evaluate(hyper_params, Model, define_loss_fn=None,
 
     if not os.path.exists(chkpt_path):
         os.makedirs(chkpt_path)
+        
+    # If hyperparam config is used
+    if Model is None:
+        arch_model = __import__(hyperparams.arch.model, fromlist=["Model"])
+        Model = arch_model.Model
+    if define_loss_fn is None and hyperparams.arch.get("loss", None) is not None:
+        arch_loss = __import__(hyperparams.arch.loss, fromlist=["define_loss_fn"])
+        define_loss_fn = arch_loss.define_loss_fn
+    if training_data is None and hyperparams.problem.get("prepare", None) is not None:
+        prepare = __import__(hyperparams.problem.prepare, fromlist=["Sequence"])
+        training_data = prepare.Sequence(hyperparams, PHASE_TRAIN)
+        validation_data = prepare.Sequence(hyperparams, PHASE_VALIDATION)
+        
+    # TODO save code
 
     # Write hyper parameters to be able to track what config you had.
     with open(chkpt_path + "/hyperparameters.json", "w") as json_file:
@@ -148,3 +168,16 @@ def easy_train_and_evaluate(hyper_params, Model, define_loss_fn=None,
                             callbacks=callbacks, workers=2, use_multiprocessing=False, shuffle=True, verbose=1)
 
     return chkpt_path
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 2 or len(sys.argv) == 3:
+        continue_training = False
+        idx = 1
+        if sys.argv[idx] == "--continue":
+            continue_training = True
+            idx += 1
+        hyperparams = load_params(sys.argv[1])
+        easy_train_and_evaluate(hyperparams, continue_training=continue_training)
+    else:
+        print("Usage: python -m starttf.estimators.keras_trainer [--continue] hyperparameters/myparams.json")
