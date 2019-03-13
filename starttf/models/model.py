@@ -24,6 +24,33 @@ import tensorflow as tf
 import keras
 
 
+class StartTFModule(object):
+    def __init__(self, parent, hyperparams):
+        # Set both since they seem to be not the same
+        self.parent = parent
+        tf.keras.backend.set_session(tf.get_default_session())
+        keras.backend.set_session(tf.get_default_session())
+        self.hyperparams = hyperparams
+        self.tensorflow = False
+        self.keras = False
+
+    def __call__(self, *args, **kwargs):
+        self.tensorflow = self.parent.tensorflow
+        self.keras = self.parent.keras
+        if not self.tensorflow and not self.keras:
+            raise RuntimeError("Parent did NOT have tensorflow or keras set. Is it a valid StartTFModule or StartTFModel object?")
+        if self.tensorflow and self.keras:
+            raise RuntimeError("Parent did have tensorflow and keras both set. Is it a valid StartTFModule or StartTFModel object?")
+        return self.call(*args, **kwargs)
+
+    def call(self, *args, **kwargs):
+        """
+        Run the model.
+        """
+        raise NotImplementedError("The model must implement a call function which predicts " +
+                                  "the outputs (dict of tensors) given the input (dict of tensors).")
+
+
 class StartTFPartialModel(object):
     def __init__(self, hyperparams):
         # Set both since they seem to be not the same
