@@ -22,7 +22,7 @@
 
 import tensorflow as tf
 
-from starttf.models.model import StartTFPartialModel
+from starttf.modules.module import Module
 
 ENCODERS = {
     "vgg16": tf.keras.applications.vgg16.VGG16,
@@ -33,15 +33,15 @@ ENCODERS = {
 }
 
 
-class Encoder(StartTFPartialModel):
-    def __init__(self, hyperparams):
-        super(Encoder, self).__init__(hyperparams)
-        encoder_name = hyperparams.get("encoder", "vgg16")
+class Encoder(Module):
+    def __init__(self, name="Encoder"):
+        super(Encoder, self).__init__(name)
+        encoder_name = self.hyperparams.get("encoder", "vgg16")
         if encoder_name not in ENCODERS:
             errormsg = "Unknown encoder {}. Please pick one of the following: {}".format(encoder_name, ENCODERS.keys())
             raise ValueError(errormsg)
 
-        encoder_weights = hyperparams.get("encoder_weights", "imagenet")
+        encoder_weights = self.hyperparams.get("encoder_weights", "imagenet")
         self.encoder = ENCODERS[encoder_name](weights=encoder_weights, include_top=False)
 
     def call(self, input_tensor, training=False):
@@ -56,15 +56,15 @@ class Encoder(StartTFPartialModel):
         return model, debug
 
 
-class MultiResolutionEncoder(StartTFPartialModel):
-    def __init__(self, hyperparams):
-        super(Encoder, self).__init__(hyperparams)
-        encoder_name = hyperparams.get("encoder", "vgg16")
+class MultiResolutionEncoder(Module):
+    def __init__(self, name="MultiResolutionEncoder"):
+        super(Encoder, self).__init__(name)
+        encoder_name = self.hyperparams.get("encoder", "vgg16")
         if encoder_name not in ENCODERS:
             errormsg = "Unknown encoder {}. Please pick one of the following: {}".format(encoder_name, ENCODERS.keys())
             raise ValueError(errormsg)
 
-        encoder_weights = hyperparams.get("encoder_weights", "imagenet")
+        encoder_weights = self.hyperparams.get("encoder_weights", "imagenet")
         self.encoder = ENCODERS[encoder_name](weights=encoder_weights, include_top=False)
         if encoder_name == "resnet50":
             # FPN Paper style resnet50 encoder

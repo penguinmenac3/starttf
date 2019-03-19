@@ -20,37 +20,36 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import socket, ssl
+import tensorflow as tf
 
-def handle(conn):
-    fh = conn.makefile()
-    while True:
-        msg = fh.readline().decode("utf-8")
-        if msg == "DONE TRAINING":
-            return True
-        print(msg)
-        if msg.startswith("ERROR"):
-            return False
-    return True
+hyperparams = None
 
-def send_remote(command, fun, params, host, port, password):
-    ret_val = False
-    sock = socket.socket(socket.AF_INET)
-    context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-    context.options |= ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1  # optional
-    conn = context.wrap_socket(sock, server_hostname=host)
-    try:
-        conn.connect((host, port))
-        handshake = "handshake " + password + "\n"
-        conn.write(handshake.encode("utf-8"))
-        if command == "start":
-            msg = "start " + pickle.dumps((fun, params)) + "\n"
-            conn.write(msg.encode("utf-8"))
-        else:
-            msg = command + "\n"
-            conn.write(msg.encode("utf-8"))
-        ret_val = handle(conn)
-    finally:
-        conn.close()
 
-    return ret_val
+class RunOnce(object):
+    def __init__(self, f):
+        self.f = f
+        self.called = False
+    
+    def __call__(self, *args, **kwargs):
+        if not self.called:
+            self.called = True
+            self.f(*args, **kwargs)
+
+
+class Module(tf.Module):
+    def __init__(self, name=None):
+        super().__init__(name=name)
+        self.hyperparams = hyperparams
+
+    def __call__(self, *args, **kwargs):
+        self.hyperparams = hyperparams
+
+        with tf.variable_scope(self.name) as scope:
+            return self.call(*args, **kwargs)
+
+    def call(self, *args, **kwargs):
+        """
+        Run the model.
+        """
+        raise NotImplementedError("The model must implement a call function which predicts " +
+                                  "the outputs (dict of tensors) given the input (dict of tensors).")
