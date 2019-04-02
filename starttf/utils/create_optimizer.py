@@ -27,7 +27,7 @@ LearningRateScheduler = tf.keras.callbacks.LearningRateScheduler
 
 def create_optimizer(params):
     learning_rate = None
-    global_step = tf.train.get_global_step()
+    #global_step = tf.train.get_global_step()
     if params.train.learning_rate.type == "exponential":
         learning_rate = tf.train.exponential_decay(params.train.learning_rate.start_value, global_step,
                                                    params.train.steps,
@@ -76,45 +76,45 @@ def create_optimizer(params):
 
 
 def create_keras_optimizer(params):
-    with tf.variable_scope("optimizer"):
-        lr_fn = None
-        if params.train.learning_rate.type == "exponential":
-            def exp_decay(epoch):
-                initial_lrate = params.train.learning_rate.start_value
-                k = params.train.learning_rate.end_value / params.train.learning_rate.start_value
-                lrate = initial_lrate * math.exp(-k * epoch)
-                return lrate
-            lr_fn = exp_decay
-            tf.summary.scalar('hyper_params/lr/start_value',
-                              tf.constant(params.train.learning_rate.start_value))
-            tf.summary.scalar('hyper_params/lr/end_value', tf.constant(params.train.learning_rate.end_value))
-        elif params.train.learning_rate.type == "const":
-            def const_lr(epoch):
-                initial_lrate = params.train.learning_rate.start_value
-                return initial_lrate
-            lr_fn = const_lr
-            tf.summary.scalar('hyper_params/lr/start_value',
-                              tf.constant(params.train.learning_rate.start_value))
-        else:
-            raise RuntimeError("Unknown learning rate: %s" % params.train.learning_rate.type)
-        lr_sheduler = LearningRateScheduler(lr_fn)
-        learning_rate = params.train.learning_rate.start_value
+    #with tf.variable_scope("optimizer"):
+    lr_fn = None
+    if params.train.learning_rate.type == "exponential":
+        def exp_decay(epoch):
+            initial_lrate = params.train.learning_rate.start_value
+            k = params.train.learning_rate.end_value / params.train.learning_rate.start_value
+            lrate = initial_lrate * math.exp(-k * epoch)
+            return lrate
+        lr_fn = exp_decay
+        tf.summary.scalar('hyper_params/lr/start_value',
+                            tf.constant(params.train.learning_rate.start_value))
+        tf.summary.scalar('hyper_params/lr/end_value', tf.constant(params.train.learning_rate.end_value))
+    elif params.train.learning_rate.type == "const":
+        def const_lr(epoch):
+            initial_lrate = params.train.learning_rate.start_value
+            return initial_lrate
+        lr_fn = const_lr
+        tf.summary.scalar('hyper_params/lr/start_value',
+                            tf.constant(params.train.learning_rate.start_value))
+    else:
+        raise RuntimeError("Unknown learning rate: %s" % params.train.learning_rate.type)
+    lr_scheduler = LearningRateScheduler(lr_fn)
+    learning_rate = params.train.learning_rate.start_value
 
-        # Setup Optimizer
-        optimizer = None
-        if params.train.optimizer.type == "sgd":
-            optimizer = tf.keras.optimizers.SGD(lr=learning_rate)
-        elif params.train.optimizer.type == "rmsprop":
-            optimizer = tf.keras.optimizers.RMSProp(lr=learning_rate)
-        elif params.train.optimizer.type == "adadelta":
-            optimizer = tf.keras.optimizers.Adadelta(lr=learning_rate)
-        elif params.train.optimizer.type == "adagrad":
-            optimizer = tf.keras.optimizers.Adagrad(lr=learning_rate)
-        elif params.train.optimizer.type == "adam":
-            optimizer = tf.keras.optimizers.Adam(lr=learning_rate)
-        else:
-            raise RuntimeError("Unknown optimizer: %s" % params.train.optimizer.type)
+    # Setup Optimizer
+    optimizer = None
+    if params.train.optimizer.type == "sgd":
+        optimizer = tf.keras.optimizers.SGD(lr=learning_rate)
+    elif params.train.optimizer.type == "rmsprop":
+        optimizer = tf.keras.optimizers.RMSProp(lr=learning_rate)
+    elif params.train.optimizer.type == "adadelta":
+        optimizer = tf.keras.optimizers.Adadelta(lr=learning_rate)
+    elif params.train.optimizer.type == "adagrad":
+        optimizer = tf.keras.optimizers.Adagrad(lr=learning_rate)
+    elif params.train.optimizer.type == "adam":
+        optimizer = tf.keras.optimizers.Adam(lr=learning_rate)
+    else:
+        raise RuntimeError("Unknown optimizer: %s" % params.train.optimizer.type)
 
-        tf.summary.scalar('hyper_params/lr/learning_rate', optimizer.lr)
+    tf.summary.scalar('hyper_params/lr/learning_rate', optimizer.lr)
 
-        return optimizer, lr_sheduler
+    return optimizer, lr_scheduler

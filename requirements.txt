@@ -1,20 +1,5 @@
+hyperparams
 numpy
 scikit-image
-scikit-learn
 scipy
 matplotlib
-h5py
-pandas
-opencv-python
-tensorflow-hub
-hyperparams
-opendatalake
-GPUtil
-keras
-
-# Dev/Deployment
-#sphinx
-#sphinx_rtd_theme
-#nose
-#coverage
-#pypi-publisher

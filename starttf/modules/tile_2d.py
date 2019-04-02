@@ -21,14 +21,15 @@
 # SOFTWARE.
 
 import tensorflow as tf
-from starttf.modules.module import Module, RunOnce
+from starttf.modules import Module
+from starttf import RunOnce
 
 Conv2D = tf.keras.layers.Conv2D
 
 
 class Tile2D(Module):
     def __init__(self, k_x, k_y, name="Tile2D"):
-        super().__init__(name)
+        super().__init__(name, lambda_mode=True)
         self.k_x = k_x
         self.k_y = k_y
 
@@ -65,7 +66,7 @@ class Tile2D(Module):
 
 class InverseTile2D(Module):
     def __init__(self, k_x, k_y, name="InverseTile2D"):
-        super().__init__(name)
+        super().__init__(name, lambda_mode=True)
         self.k_x = k_x
         self.k_y = k_y
     
@@ -110,7 +111,7 @@ class FeaturePassthrough(Module):
         :param kernel_size: The size of the kernel. Default (1x1).
         :param name: The name of the layer.
         """
-        super().__init__(name)
+        super().__init__(name, lambda_mode=True)
         self.filters = filters
         self.kernel_size = kernel_size
     
@@ -152,7 +153,7 @@ class UpsamplingFeaturePassthrough(Module):
         :param kernel_size: The size of the kernel. Default (1x1).
         :param name: The name of the layer.
         """
-        super().__init__(name)
+        super().__init__(name, lambda_mode=True)
         self.filters = filters
         self.kernel_size = kernel_size
     

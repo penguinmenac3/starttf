@@ -22,7 +22,7 @@
 
 import tensorflow as tf
 
-from starttf.modules.module import Module
+from starttf.modules import Module
 
 ENCODERS = {
     "vgg16": tf.keras.applications.vgg16.VGG16,
@@ -44,16 +44,12 @@ class Encoder(Module):
         encoder_weights = self.hyperparams.get("encoder_weights", "imagenet")
         self.encoder = ENCODERS[encoder_name](weights=encoder_weights, include_top=False)
 
-    def call(self, input_tensor, training=False):
+    def call(self, image, training=False):
         """
         Run the model.
         """
-        image = tf.cast(input_tensor["image"], dtype=tf.float32, name="input/cast")
-        model = {}
-        debug = {}
-        debug["image"] = image
-        model["features"] = self.encoder(image, training=training)
-        return model, debug
+        image = tf.cast(image, dtype=tf.float32, name="input/cast")
+        return self.encoder(image, training=training)
 
 
 class MultiResolutionEncoder(Module):

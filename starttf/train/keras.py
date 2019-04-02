@@ -29,6 +29,7 @@ import sys
 import tensorflow as tf
 from hyperparams.hyperparams import load_params
 
+import starttf
 from starttf.utils.session_config import get_default_config
 from starttf.data.autorecords import create_input_fn, PHASE_TRAIN, PHASE_VALIDATION
 from starttf.utils.plot_losses import create_keras_callbacks
@@ -47,7 +48,7 @@ def rename_fn(fn, name):
     return tmp
 
 
-def easy_train_and_evaluate(hyper_params, Model=None, define_loss_fn=None,
+def easy_train_and_evaluate(hyper_params, model=None, loss=None,
                             training_data=None, validation_data=None,
                             continue_training=False,
                             session_config=None, log_suffix=None, continue_with_specific_checkpointpath=None):
@@ -83,6 +84,7 @@ def easy_train_and_evaluate(hyper_params, Model=None, define_loss_fn=None,
     :param log_suffix: A suffix for the log folder, so you can remember what was special about the run.
     :return:
     """
+    starttf.hyperparams = hyper_params
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
     chkpt_path = hyper_params.train.checkpoint_path + "/" + time_stamp
     if log_suffix is not None:
@@ -103,16 +105,23 @@ def easy_train_and_evaluate(hyper_params, Model=None, define_loss_fn=None,
         os.makedirs(chkpt_path)
         
     # If hyperparam config is used
-    if Model is None:
-        arch_model = __import__(hyperparams.arch.model, fromlist=["Model"])
-        Model = arch_model.Model
-    if define_loss_fn is None and hyperparams.arch.get("loss", None) is not None:
-        arch_loss = __import__(hyperparams.arch.loss, fromlist=["define_loss_fn"])
-        define_loss_fn = arch_loss.define_loss_fn
-    if training_data is None and hyperparams.problem.get("prepare", None) is not None:
-        prepare = __import__(hyperparams.problem.prepare, fromlist=["Sequence"])
-        training_data = prepare.Sequence(hyperparams, PHASE_TRAIN)
-        validation_data = prepare.Sequence(hyperparams, PHASE_VALIDATION)
+    if model is None:
+        p = ".".join(hyper_params.arch.model.split(".")[:-1])
+        n = hyper_params.arch.model.split(".")[-1]
+        arch_model = __import__(p, fromlist=[n])
+        model = arch_model.__dict__[n]()
+    if loss is None and hyper_params.arch.get("loss", None) is not None:
+        p = ".".join(hyper_params.arch.loss.split(".")[:-1])
+        n = hyper_params.arch.loss.split(".")[-1]
+        arch_loss = __import__(p, fromlist=[n])
+        loss = arch_loss.__dict__[n]()
+    if training_data is None and hyper_params.arch.get("prepare", None) is not None:
+        p = ".".join(hyper_params.arch.prepare.split(".")[:-1])
+        n = hyper_params.arch.prepare.split(".")[-1]
+        prepare = __import__(p, fromlist=[n])
+        prepare = prepare.__dict__[n]
+        training_data = prepare(hyper_params, PHASE_TRAIN)
+        validation_data = prepare(hyper_params, PHASE_VALIDATION)
         
     # TODO save code
 
@@ -125,11 +134,11 @@ def easy_train_and_evaluate(hyper_params, Model=None, define_loss_fn=None,
 
     losses = {}
     metrics = {}
-    if define_loss_fn is None:
+    if loss is None:
         losses = hyper_params.train.loss.to_dict()
         metrics = hyper_params.train.metrics.to_dict()
     else:
-        losses, metrics = define_loss_fn(hyper_params)
+        losses, metrics = loss.losses, loss.metrics
     callbacks = create_keras_callbacks(hyper_params, chkpt_path)
     optimizer, lr_sheduler = create_keras_optimizer(hyper_params)
     callbacks.append(lr_sheduler)
@@ -140,10 +149,10 @@ def easy_train_and_evaluate(hyper_params, Model=None, define_loss_fn=None,
         validation_data = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_VALIDATION),
                                                                  hyper_params.train.batch_size)().make_one_shot_iterator().get_next()
 
-        model = Model(hyper_params)
         input_tensor = {k: tf.keras.layers.Input(shape=train_features[k].get_shape().as_list(), name=k) for k in train_features}
         target_placeholders = {k: tf.placeholder(shape=(None,) + train_labels[k].shape[1:], dtype=train_labels[k].dtype, name=k + "_placeholder") for k in train_labels}
-        model = model.create_keras_model(input_tensor, training=True)
+        input_tensor["training"] = True
+        model = model.create_keras_model(**input_tensor)
         # model.metrics_names = [k for k in metrics]
         model.compile(loss=losses, optimizer=optimizer, metrics=[rename_fn(v, name=k) for k, v in metrics.iteritems()], target_tensors=target_placeholders)
         tf.keras.backend.get_session().run(tf.global_variables_initializer())
@@ -157,12 +166,12 @@ def easy_train_and_evaluate(hyper_params, Model=None, define_loss_fn=None,
         # first batches features
         #features = training_data[0][0]
         #model._set_inputs({k: tf.zeros(features[k].shape) for k in features})
-        model = Model(hyper_params)
         train_features = training_data[0][0]
         train_labels = training_data[0][1]
         input_tensor = {k: tf.keras.layers.Input(shape=train_features[k].shape[1:], name=k) for k in train_features}
         target_placeholders = {k: tf.placeholder(shape=(None,) + train_labels[k].shape[1:], dtype=train_labels[k].dtype, name=k + "_placeholder") for k in train_labels}
-        model = model.create_keras_model(input_tensor, training=True)
+        input_tensor["training"] = True
+        model = model.create_keras_model(**input_tensor)
         # model.metrics_names = [k for k in metrics]
         model.compile(loss=losses, optimizer=optimizer, metrics=[metrics[k] for k in metrics], target_tensors=target_placeholders)
         tf.keras.backend.get_session().run(tf.global_variables_initializer())

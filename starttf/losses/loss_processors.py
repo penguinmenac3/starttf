@@ -34,10 +34,9 @@ def interpolate_loss(labels, loss1, loss2, interpolation_values):
     :param interpolation_values: The values for each class how much focal loss should be interpolated in.
     :return: A tensor representing the weighted cross entropy.
     """
-    with tf.variable_scope("interpolate_focus_loss"):
-        # Select the probs or weights with the labels.
-        t = tf.reduce_sum(labels * interpolation_values, axis=-1)
-        return (1 - t) * loss1 + t * loss2
+    # Select the probs or weights with the labels.
+    t = tf.reduce_sum(labels * interpolation_values, axis=-1)
+    return (1 - t) * loss1 + t * loss2
 
 
 def alpha_balance_loss(labels, loss, alpha_weights):
@@ -52,10 +51,9 @@ def alpha_balance_loss(labels, loss, alpha_weights):
                               of dimensions to labels tensor) representing the weights for each class.
     :return: A tensor representing the weighted cross entropy.
     """
-    with tf.variable_scope("alpha_balance"):
-        # Broadcast multiply labels with alpha weights to select weights and then reduce them along last axis.
-        weights = tf.reduce_sum(labels * alpha_weights, axis=-1)
-        return weights * loss
+    # Broadcast multiply labels with alpha weights to select weights and then reduce them along last axis.
+    weights = tf.reduce_sum(labels * alpha_weights, axis=-1)
+    return weights * loss
 
 
 def batch_alpha_balance_loss(labels, loss):
@@ -70,16 +68,15 @@ def batch_alpha_balance_loss(labels, loss):
     :param loss: A float tensor of shape [batch_size, ...] representing the loss that should be focused.
     :return: A tensor representing the weighted cross entropy.
     """
-    with tf.variable_scope("batch_alpha_balance"):
-        # Compute the occurrence probability for each class
-        mu, _ = tf.nn.moments(labels, [0, 1, 2])
+    # Compute the occurrence probability for each class
+    mu, _ = tf.nn.moments(labels, [0, 1, 2])
 
-        # For weighting a class should be down weighted by its occurrence probability.
-        not_mu = 1 - mu
+    # For weighting a class should be down weighted by its occurrence probability.
+    not_mu = 1 - mu
 
-        # Select the class specific not_mu
-        not_mu_class = tf.reduce_sum(labels * not_mu, axis=-1)
-        return not_mu_class * loss
+    # Select the class specific not_mu
+    not_mu_class = tf.reduce_sum(labels * not_mu, axis=-1)
+    return not_mu_class * loss
 
 
 def mask_loss(input_tensor, binary_tensor):
@@ -90,10 +87,9 @@ def mask_loss(input_tensor, binary_tensor):
     :param binary_tensor: A float tensor of shape [batch_size, ...] representing the mask.
     :return: A float tensor of shape [batch_size, ...] representing the masked loss.
     """
-    with tf.variable_scope("mask_loss"):
-        mask = tf.cast(tf.cast(binary_tensor, tf.bool), tf.float32)
+    mask = tf.cast(tf.cast(binary_tensor, tf.bool), tf.float32)
 
-        return input_tensor * mask
+    return input_tensor * mask
 
 
 def mean_on_masked(loss, mask, epsilon=1e-8, axis=None):
@@ -137,15 +133,14 @@ def variance_corrected_loss(loss, sigma_2=None):
     :param sigma_2: Optional a variance (sigma squared) to use. If none is provided it is learned.
     :return: The variance corrected loss.
     """
-    with tf.variable_scope("variance_corrected_loss"):
-        sigma_cost = 0
-        if sigma_2 is None:
-            # FIXME the paper has been updated Apr 2018, check if implementation is still valid.
-            sigma = tf.get_variable(name="sigma", dtype=tf.float32, initializer=tf.constant(1.0), trainable=True)
-            sigma_2 = tf.pow(sigma, 2)
-            tf.summary.scalar("sigma2", sigma_2)
-            sigma_cost = tf.log(sigma_2 + 1.0)
-        return 0.5 / sigma_2 * loss + sigma_cost
+    sigma_cost = 0
+    if sigma_2 is None:
+        # FIXME the paper has been updated Apr 2018, check if implementation is still valid.
+        sigma = tf.get_variable(name="sigma", dtype=tf.float32, initializer=tf.constant(1.0), trainable=True)
+        sigma_2 = tf.pow(sigma, 2)
+        tf.summary.scalar("sigma2", sigma_2)
+        sigma_cost = tf.log(sigma_2 + 1.0)
+    return 0.5 / sigma_2 * loss + sigma_cost
 
 
 def multiloss(losses, logging_namespace="multiloss", exclude_from_weighting=[]):
@@ -158,15 +153,14 @@ def multiloss(losses, logging_namespace="multiloss", exclude_from_weighting=[]):
     :param exclude_from_weighting: A list of losses that are already weighted and should not be sigma weighted.
     :return: A single loss.
     """
-    with tf.variable_scope(logging_namespace):
-        sum_loss = 0
-        for loss_name, loss in losses.items():
-            if loss_name not in exclude_from_weighting:
-                with tf.variable_scope(loss_name) as scope:
-                    sum_loss += variance_corrected_loss(loss)
-            else:
-                sum_loss += loss
-        return sum_loss
+    sum_loss = 0
+    for loss_name, loss in losses.items():
+        if loss_name not in exclude_from_weighting:
+            with tf.variable_scope(loss_name) as scope:
+                sum_loss += variance_corrected_loss(loss)
+        else:
+            sum_loss += loss
+    return sum_loss
 
 
 def focus_loss(labels, probs, loss, gamma):
@@ -181,10 +175,8 @@ def focus_loss(labels, probs, loss, gamma):
     :param gamma: The focus parameter.
     :return: A tensor representing the weighted cross entropy.
     """
-    with tf.variable_scope("focus_loss"):
-        # Compute p_t that is used in paper.
-        # FIXME is it possible that the 1-p term does not make any sense?
-        p_t = tf.reduce_sum(probs * labels, axis=-1)# + tf.reduce_sum((1.0 - probs) * (1.0 - labels), axis=-1)
-
-        focal_factor = tf.pow(1.0 - p_t, gamma) if gamma > 0 else 1  # Improve stability for gamma = 0
-        return tf.stop_gradient(focal_factor) * loss
+    # Compute p_t that is used in paper.
+    # FIXME is it possible that the 1-p term does not make any sense?
+    p_t = tf.reduce_sum(probs * labels, axis=-1)# + tf.reduce_sum((1.0 - probs) * (1.0 - labels), axis=-1)
+    focal_factor = tf.pow(1.0 - p_t, gamma) if gamma > 0 else 1  # Improve stability for gamma = 0
+    return tf.stop_gradient(focal_factor) * loss
