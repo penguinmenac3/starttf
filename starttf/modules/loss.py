@@ -27,7 +27,8 @@ from starttf.modules import Module
 class CompositeLoss(Module):
     def __init__(self, name="CompositeLoss"):
         super().__init__(name=name)
-        self.losses = None
+        self.losses = {}
+        self.metrics = {}
 
     def call(self, y_true, y_pred):
         if self.losses is None:

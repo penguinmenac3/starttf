@@ -93,6 +93,8 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
     if session_config is None:
         session_config = get_default_config()
 
+    tf.keras.backend.set_session(tf.Session(config=session_config))
+
     if continue_with_specific_checkpointpath:
         chkpt_path = hyper_params.train.checkpoint_path + "/" + continue_with_specific_checkpointpath
         print("Continue with checkpoint: {}".format(chkpt_path))
