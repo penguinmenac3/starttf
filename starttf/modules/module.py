@@ -80,7 +80,7 @@ class Module(object):
         return train_vars
 
     def __call__(self, *args, **kwargs):
-        with tf.variable_scope(self.name) as scope:    
+        with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE) as scope:    
             if self.lambda_mode:
                 return self.__lambda(*args, **kwargs)
             return self.call(*args, **kwargs)

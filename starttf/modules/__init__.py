@@ -1,8 +1,5 @@
 import tensorflow as tf
 
-NO_PARAMS = object()
-hyperparams = None
-
 # If version is 1.x use the fallback implementation of module.
 if tf.__version__.startswith("1."):
     from starttf.modules.module import Module
