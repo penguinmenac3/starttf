@@ -21,23 +21,33 @@
 # SOFTWARE.
 
 import tensorflow as tf
-import starttf as m
+import starttf
 
 Lambda = tf.keras.layers.Lambda
 
 
 class Module(tf.Module):
     def __init__(self, name, **kwargs):
+        if starttf.modules.log_calls:
+            print("{}.__init__".format(name))
         super().__init__(name=name)
-        if m.hyperparams is None and m.hyperparams is not m.NO_PARAMS:
+        if starttf.hyperparams is None and starttf.hyperparams is not starttf.NO_PARAMS:
             raise RuntimeWarning("You did not set starttf.modules.hyperparams. You may want to consider setting it to starttf.modules.NO_PARAMS if this was intentional.")
-        self.hyperparams = m.hyperparams
+        self.hyperparams = starttf.hyperparams
         self.lambda_mode = False
         self.__dict__.update(kwargs)
         if self.lambda_mode:
             self.__lambda = Lambda(self.call)
 
     def __call__(self, *args, **kwargs):
+        if starttf.modules.log_calls or starttf.modules.log_inputs:
+            print("{}.__call__".format(self.name))
+        if starttf.modules.log_inputs:
+            for a in args:
+                print(" {}".format(a))
+            for k in kwargs:
+                print(" {}: {}".format(k, kwargs[k]))
+            print()
         if self.lambda_mode:
             return self.__lambda(*args, **kwargs)
         return self.call(*args, **kwargs)
@@ -48,3 +58,9 @@ class Module(tf.Module):
         """
         raise NotImplementedError("The model must implement a call function which predicts " +
                                   "the outputs (dict of tensors) given the input (dict of tensors).")
+
+    @RunOnce
+    def summary(self, **kwargs):
+        # TODO check if this actually works this way in tensorflow 2, probably not...
+        for k in kwargs:
+            tf.summary.scalar(k, kwargs[k])

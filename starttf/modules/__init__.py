@@ -33,3 +33,8 @@ else:
 from starttf.modules.encoders import Encoder, MultiResolutionEncoder
 from starttf.modules.tile_2d import Tile2D, InverseTile2D, UpsamplingFeaturePassthrough, FeaturePassthrough
 from starttf.modules.loss import CompositeLoss
+
+
+log_calls = False
+log_creations = False
+log_inputs = False
