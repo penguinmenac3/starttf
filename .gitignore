@@ -5,6 +5,7 @@ datasets
 checkpoints
 tfrecords
 weights
+test_results.txt
 
 *.code-workspace
 Tensorboard.bat

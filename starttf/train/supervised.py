@@ -115,6 +115,8 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None, 
         score = __eval(model, validation_data, evaluator)
         print("\rEpoch {}/{} - {}".format(i+1, epochs, score))
 
+    return chkpt_path
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 2 or len(sys.argv) == 3:
