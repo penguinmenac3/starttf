@@ -64,3 +64,21 @@ class Module(tf.Module):
         # TODO check if this actually works this way in tensorflow 2, probably not...
         for k in kwargs:
             tf.summary.scalar(k, kwargs[k])
+
+    def load_model(self, checkpoint_path, input_shapes_dict, input_dtypes_dict, model_path=None):
+        """
+        Load a model from a checkpoint path or set checkpoint path to None and provide a model_path to load a model saved with save_model.
+        """
+        raise NotImplementedError("TODO this is not implemented yet.")
+
+    def save_model(self, model_path):
+        """
+        Save the model in a format that can be loaded via load_model.
+        """
+        raise NotImplementedError("TODO this is not implemented yet.")
+
+    def predict(self, *args, **kwargs):
+        """
+        Predict the outputs of a model given some inputs.
+        """
+        return self.__call__(*args, **kwargs)
