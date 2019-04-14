@@ -52,7 +52,10 @@ def rename_fn(fn, name):
 def easy_train_and_evaluate(hyper_params, model=None, loss=None,
                             training_data=None, validation_data=None,
                             continue_training=False,
-                            session_config=None, log_suffix=None, continue_with_specific_checkpointpath=None):
+                            session_config=None,
+                            log_suffix=None,
+                            continue_with_specific_checkpointpath=None,
+                            no_artifacts=False):
     """
     Train and evaluate your model without any boilerplate code.
 
@@ -104,7 +107,7 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
         chkpt_path = hyper_params.train.checkpoint_path + "/" + chkpts[-1]
         print("Latest found checkpoint: {}".format(chkpt_path))
 
-    if not os.path.exists(chkpt_path):
+    if not os.path.exists(chkpt_path) and not no_artifacts:
         os.makedirs(chkpt_path)
         
     # If hyperparam config is used
@@ -129,8 +132,9 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
     # TODO save code
 
     # Write hyper parameters to be able to track what config you had.
-    with open(chkpt_path + "/hyperparameters.json", "w") as json_file:
-        json_file.write(json.dumps(hyper_params.to_dict(), indent=4, sort_keys=True))
+    if not no_artifacts:
+        with open(chkpt_path + "/hyperparameters.json", "w") as json_file:
+            json_file.write(json.dumps(hyper_params.to_dict(), indent=4, sort_keys=True))
 
     if training_data is not None:
         hyper_params.train.steps = hyper_params.train.epochs * len(training_data)
@@ -142,7 +146,7 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
         metrics = hyper_params.train.metrics.to_dict()
     else:
         losses, metrics = loss.losses, loss.metrics
-    callbacks = create_keras_callbacks(hyper_params, chkpt_path)
+    callbacks = create_keras_callbacks(hyper_params, chkpt_path, no_artifacts=no_artifacts)
     optimizer, lr_sheduler = create_keras_optimizer(hyper_params)
     callbacks.append(lr_sheduler)
 
@@ -157,7 +161,7 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
         input_tensor["training"] = True
         model = model.create_keras_model(**input_tensor)
         # model.metrics_names = [k for k in metrics]
-        model.compile(loss=losses, optimizer=optimizer, metrics=[rename_fn(v, name=k) for k, v in metrics.iteritems()], target_tensors=target_placeholders)
+        model.compile(loss=losses, optimizer=optimizer, metrics=metrics, target_tensors=target_placeholders)
         tf.keras.backend.get_session().run(tf.global_variables_initializer())
         model.fit(train_features, train_labels, validation_data=validation_data,
                   batch_size=hyper_params.train.batch_size,
@@ -176,7 +180,7 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
         input_tensor["training"] = True
         model = model.create_keras_model(**input_tensor)
         # model.metrics_names = [k for k in metrics]
-        model.compile(loss=losses, optimizer=optimizer, metrics=[metrics[k] for k in metrics], target_tensors=target_placeholders)
+        model.compile(loss=losses, optimizer=optimizer, metrics=metrics, target_tensors=target_placeholders)
         tf.keras.backend.get_session().run(tf.global_variables_initializer())
         model.fit_generator(training_data, validation_data=validation_data, epochs=hyper_params.train.get("epochs", 50),
                             callbacks=callbacks, workers=2, use_multiprocessing=False, shuffle=True, verbose=1)
@@ -187,13 +191,17 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
 if __name__ == "__main__":
     if len(sys.argv) == 2 or len(sys.argv) == 3:
         continue_training = False
+        no_artifacts = False
         idx = 1
         if sys.argv[idx] == "--continue":
             continue_training = True
             idx += 1
+        if sys.argv[idx] == "--no_artifacts":
+            no_artifacts = True
+            idx += 1
         hyperparams = load_params(sys.argv[1])
         name = hyperparams.train.get("experiment_name", "unnamed")
         setproctitle("train {}".format(name))
-        easy_train_and_evaluate(hyperparams, continue_training=continue_training, log_suffix=name)
+        easy_train_and_evaluate(hyperparams, continue_training=continue_training, log_suffix=name, no_artifacts=no_artifacts)
     else:
         print("Usage: python -m starttf.estimators.keras_trainer [--continue] hyperparameters/myparams.json")

@@ -33,11 +33,12 @@ except ModuleNotFoundError:
     NO_IPYTHON = True
 
 
-def create_keras_callbacks(hyperparams, log_dir):
+def create_keras_callbacks(hyperparams, log_dir, no_artifacts=False):
     callbacks = []
-    callbacks.append(TrainValTensorBoard(log_dir=log_dir, summary_steps=hyperparams.train.summary_steps, histogram_freq=0, batch_size=hyperparams.train.batch_size, write_grads=False, write_images=False))
-    callbacks.append(tf.keras.callbacks.ModelCheckpoint(log_dir + "/model.hdf5", monitor='val_loss', save_best_only=True, mode='auto'))
-    callbacks.append(tf.keras.callbacks.CSVLogger(log_dir + "/results.csv", separator=','))
+    if not no_artifacts:
+        callbacks.append(TrainValTensorBoard(log_dir=log_dir, summary_steps=hyperparams.train.summary_steps, histogram_freq=0, batch_size=hyperparams.train.batch_size, write_grads=False, write_images=False))
+        callbacks.append(tf.keras.callbacks.ModelCheckpoint(log_dir + "/model.hdf5", monitor='val_loss', save_best_only=True, mode='auto'))
+        callbacks.append(tf.keras.callbacks.CSVLogger(log_dir + "/results.csv", separator=','))
     callbacks.append(tf.keras.callbacks.TerminateOnNaN())
     return callbacks
 

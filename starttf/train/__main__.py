@@ -34,13 +34,17 @@ else:
 
 if len(sys.argv) == 2 or len(sys.argv) == 3:
     continue_training = False
+    no_artifacts = False
     idx = 1
     if sys.argv[idx] == "--continue":
         continue_training = True
         idx += 1
+    if sys.argv[idx] == "--no_artifacts":
+        no_artifacts = True
+        idx += 1
     hyperparams = load_params(sys.argv[1])
     name = hyperparams.train.get("experiment_name", "unnamed")
     setproctitle("train {}".format(name))
-    easy_train_and_evaluate(hyperparams, continue_training=continue_training, log_suffix=name)
+    easy_train_and_evaluate(hyperparams, continue_training=continue_training, log_suffix=name, no_artifacts=no_artifacts)
 else:
     print("Usage: python -m starttf.train [--continue] hyperparameters/myparams.json")

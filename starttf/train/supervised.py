@@ -57,7 +57,7 @@ def __eval(model, dataset, eval_fn):
         total_loss += eval_fn(prediction, y)
     return total_loss / len(dataset)
 
-def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None, training_data=None, validation_data=None, optimizer=None, epochs=None, continue_training=False, log_suffix=None, continue_with_specific_checkpointpath=None):
+def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None, training_data=None, validation_data=None, optimizer=None, epochs=None, continue_training=False, log_suffix=None, continue_with_specific_checkpointpath=None, no_artifacts=False):
     starttf.hyperparams = hyperparams
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
     chkpt_path = hyperparams.train.checkpoint_path + "/" + time_stamp
@@ -72,10 +72,10 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None, 
         chkpt_path = hyperparams.train.checkpoint_path + "/" + chkpts[-1]
         print("Latest found checkpoint: {}".format(chkpt_path))
 
-    if not os.path.exists(chkpt_path):
+    if not os.path.exists(chkpt_path) and not no_artifacts:
         os.makedirs(chkpt_path)
 
-    # TODO setup tensorboard logging
+    # TODO setup tensorboard logging and checkpoints as well as model saving (when not no_artifacts)
 
     # Try to retrieve optional arguments from hyperparams if not specified
     if model is None:
@@ -119,13 +119,17 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None, 
 if __name__ == "__main__":
     if len(sys.argv) == 2 or len(sys.argv) == 3:
         continue_training = False
+        no_artifacts = False
         idx = 1
         if sys.argv[idx] == "--continue":
             continue_training = True
             idx += 1
+        if sys.argv[idx] == "--no_artifacts":
+            no_artifacts = True
+            idx += 1
         hyperparams = load_params(sys.argv[1])
         name = hyperparams.train.get("experiment_name", "unnamed")
         setproctitle("train {}".format(name))
-        easy_train_and_evaluate(hyperparams, continue_training=continue_training, log_suffix=name)
+        easy_train_and_evaluate(hyperparams, continue_training=continue_training, log_suffix=name, no_artifacts=no_artifacts)
     else:
         print("Usage: python -m starttf.train.supervised [--continue] hyperparameters/myparams.json")
