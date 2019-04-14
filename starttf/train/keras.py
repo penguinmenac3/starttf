@@ -1,6 +1,6 @@
 # MIT License
 # 
-# Copyright (c) 2018 Michael Fuerst
+# Copyright (c) 2018-2019 Michael Fuerst
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ import time
 import datetime
 import json
 import sys
+from setproctitle import setproctitle
 
 import tensorflow as tf
 from hyperparams.hyperparams import load_params
@@ -191,6 +192,8 @@ if __name__ == "__main__":
             continue_training = True
             idx += 1
         hyperparams = load_params(sys.argv[1])
-        easy_train_and_evaluate(hyperparams, continue_training=continue_training)
+        name = hyperparams.train.get("experiment_name", "unnamed")
+        setproctitle("train {}".format(name))
+        easy_train_and_evaluate(hyperparams, continue_training=continue_training, log_suffix=name)
     else:
         print("Usage: python -m starttf.estimators.keras_trainer [--continue] hyperparameters/myparams.json")

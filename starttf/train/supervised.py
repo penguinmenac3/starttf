@@ -1,4 +1,30 @@
+# MIT License
+# 
+# Copyright (c) 2019 Michael Fuerst
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 import sys
+import os
+import time
+import datetime
+from setproctitle import setproctitle
 import tensorflow as tf
 from hyperparams.hyperparams import load_params
 import starttf
@@ -31,8 +57,25 @@ def __eval(model, dataset, eval_fn):
         total_loss += eval_fn(prediction, y)
     return total_loss / len(dataset)
 
-def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None, training_data=None, validation_data=None, optimizer=None, epochs=None, continue_training=False):
+def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None, training_data=None, validation_data=None, optimizer=None, epochs=None, continue_training=False, log_suffix=None, continue_with_specific_checkpointpath=None):
     starttf.hyperparams = hyperparams
+    time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
+    chkpt_path = hyperparams.train.checkpoint_path + "/" + time_stamp
+    if log_suffix is not None:
+        chkpt_path = chkpt_path + "_" + log_suffix
+
+    if continue_with_specific_checkpointpath:
+        chkpt_path = hyperparams.train.checkpoint_path + "/" + continue_with_specific_checkpointpath
+        print("Continue with checkpoint: {}".format(chkpt_path))
+    elif continue_training:
+        chkpts = sorted([name for name in os.listdir(hyperparams.train.checkpoint_path)])
+        chkpt_path = hyperparams.train.checkpoint_path + "/" + chkpts[-1]
+        print("Latest found checkpoint: {}".format(chkpt_path))
+
+    if not os.path.exists(chkpt_path):
+        os.makedirs(chkpt_path)
+
+    # TODO setup tensorboard logging
 
     # Try to retrieve optional arguments from hyperparams if not specified
     if model is None:
@@ -81,6 +124,8 @@ if __name__ == "__main__":
             continue_training = True
             idx += 1
         hyperparams = load_params(sys.argv[1])
-        easy_train_and_evaluate(hyperparams, continue_training=continue_training)
+        name = hyperparams.train.get("experiment_name", "unnamed")
+        setproctitle("train {}".format(name))
+        easy_train_and_evaluate(hyperparams, continue_training=continue_training, log_suffix=name)
     else:
         print("Usage: python -m starttf.train.supervised [--continue] hyperparameters/myparams.json")
