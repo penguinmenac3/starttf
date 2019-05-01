@@ -54,16 +54,20 @@ def __eval(model, dataset, eval_fn):
     total_loss = 0
     for x, y in dataset:
         prediction = model(x, training=False)
-        total_loss += eval_fn(prediction, y)
+        total_loss += eval_fn(y, prediction)
     return total_loss / len(dataset)
 
-def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None, training_data=None, validation_data=None, optimizer=None, epochs=None, continue_training=False, log_suffix=None, continue_with_specific_checkpointpath=None, no_artifacts=False):
+def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None,
+                            training_data=None, validation_data=None,
+                            optimizer=None, epochs=None,
+                            continue_training=False, continue_with_specific_checkpointpath=None, no_artifacts=False,
+                            train_fn=__train, eval_fn=__eval, create_optimizer=create_keras_optimizer):
     hyperparams.immutable = True
+    hyperparams.check_completness()
     starttf.hyperparams = hyperparams
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
     chkpt_path = hyperparams.train.checkpoint_path + "/" + time_stamp
-    if log_suffix is not None:
-        chkpt_path = chkpt_path + "_" + log_suffix
+    chkpt_path = chkpt_path + "_" + hyperparams.train.experiment_name
 
     if continue_with_specific_checkpointpath:
         chkpt_path = hyperparams.train.checkpoint_path + "/" + continue_with_specific_checkpointpath
@@ -102,7 +106,7 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None, 
         training_data = prepare(hyperparams, PHASE_TRAIN)
         validation_data = prepare(hyperparams, PHASE_VALIDATION)
     if optimizer is None and hyperparams.train.get("optimizer", None) is not None:
-        optimizer, lr_scheduler = create_keras_optimizer(hyperparams)
+        optimizer, lr_scheduler = create_optimizer(hyperparams)
     if epochs is None:
         epochs = hyperparams.train.get("epochs", 1)
 
@@ -112,30 +116,34 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None, 
 
     print("Epoch {}/{}".format(1, epochs))
     for i in range(epochs):
-        __train(model, training_data, optimizer, loss)
-        score = __eval(model, validation_data, evaluator)
+        train_fn(model, training_data, optimizer, loss)
+        score = eval_fn(model, validation_data, evaluator)
         print("\rEpoch {}/{} - {}".format(i+1, epochs, score))
 
     return chkpt_path
 
 
-if __name__ == "__main__":
-    if len(sys.argv) == 2 or len(sys.argv) == 3:
+def main(args):
+    if len(args) == 2 or len(args) == 3:
         continue_training = False
         no_artifacts = False
         idx = 1
-        if sys.argv[idx] == "--continue":
+        if args[idx] == "--continue":
             continue_training = True
             idx += 1
-        if sys.argv[idx] == "--no_artifacts":
+        if args[idx] == "--no_artifacts":
             no_artifacts = True
             idx += 1
-        if sys.argv[1].endswith(".json"):
-            hyperparams = load_params(sys.argv[idx])
-        elif sys.argv[1].endswith(".py"):
-            hyperparams = import_params(sys.argv[idx])
-        name = hyperparams.train.get("experiment_name", "unnamed")
-        setproctitle("train {}".format(name))
-        easy_train_and_evaluate(hyperparams, continue_training=continue_training, log_suffix=name, no_artifacts=no_artifacts)
+        if args[1].endswith(".json"):
+            hyperparams = load_params(args[idx])
+        elif args[1].endswith(".py"):
+            hyperparams = import_params(args[idx])
+        setproctitle("train {}".format(hyperparams.train.experiment_name))
+        return easy_train_and_evaluate(hyperparams, continue_training=continue_training, no_artifacts=no_artifacts)
     else:
         print("Usage: python -m starttf.train.supervised [--continue] hyperparameters/myparams.py")
+        return None
+
+
+if __name__ == "__main__":
+    main(sys.argv)

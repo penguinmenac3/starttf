@@ -53,7 +53,6 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
                             training_data=None, validation_data=None,
                             continue_training=False,
                             session_config=None,
-                            log_suffix=None,
                             continue_with_specific_checkpointpath=None,
                             no_artifacts=False):
     """
@@ -85,15 +84,13 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
     :param inline_plotting: When you are using jupyter notebooks you can tell it to plot the loss directly inside the notebook.
     :param continue_training: Bool, continue last training in the checkpoint path specified in the hyper parameters.
     :param session_config: A configuration for the session.
-    :param log_suffix: A suffix for the log folder, so you can remember what was special about the run.
     :return:
     """
-    hyper_params.immutable = True
+    hyper_params.check_completness()
     starttf.hyperparams = hyper_params
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
     chkpt_path = hyper_params.train.checkpoint_path + "/" + time_stamp
-    if log_suffix is not None:
-        chkpt_path = chkpt_path + "_" + log_suffix
+    chkpt_path = chkpt_path + "_" + hyper_params.train.experiment_name
 
     if session_config is None:
         session_config = get_default_config()
@@ -139,6 +136,7 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
 
     if training_data is not None:
         hyper_params.train.steps = hyper_params.train.epochs * len(training_data)
+    hyper_params.immutable = True
 
     losses = {}
     metrics = {}
@@ -189,23 +187,27 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
     return chkpt_path
 
 
-if __name__ == "__main__":
-    if len(sys.argv) == 2 or len(sys.argv) == 3:
+def main(args):
+    if len(args) == 2 or len(args) == 3:
         continue_training = False
         no_artifacts = False
         idx = 1
-        if sys.argv[idx] == "--continue":
+        if args[idx] == "--continue":
             continue_training = True
             idx += 1
-        if sys.argv[idx] == "--no_artifacts":
+        if args[idx] == "--no_artifacts":
             no_artifacts = True
             idx += 1
-        if sys.argv[1].endswith(".json"):
-            hyperparams = load_params(sys.argv[idx])
-        elif sys.argv[1].endswith(".py"):
-            hyperparams = import_params(sys.argv[idx])
-        name = hyperparams.train.get("experiment_name", "unnamed")
-        setproctitle("train {}".format(name))
-        easy_train_and_evaluate(hyperparams, continue_training=continue_training, log_suffix=name, no_artifacts=no_artifacts)
+        if args[1].endswith(".json"):
+            hyperparams = load_params(args[idx])
+        elif args[1].endswith(".py"):
+            hyperparams = import_params(args[idx])
+        setproctitle("train {}".format(hyperparams.train.experiment_name))
+        return easy_train_and_evaluate(hyperparams, continue_training=continue_training, no_artifacts=no_artifacts)
     else:
         print("Usage: python -m starttf.estimators.keras_trainer [--continue] hyperparameters/myparams.py")
+        return None
+
+
+if __name__ == "__main__":
+    main(sys.argv)
