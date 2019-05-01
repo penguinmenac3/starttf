@@ -58,6 +58,7 @@ def __eval(model, dataset, eval_fn):
     return total_loss / len(dataset)
 
 def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None, training_data=None, validation_data=None, optimizer=None, epochs=None, continue_training=False, log_suffix=None, continue_with_specific_checkpointpath=None, no_artifacts=False):
+    hyperparams.immutable = True
     starttf.hyperparams = hyperparams
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
     chkpt_path = hyperparams.train.checkpoint_path + "/" + time_stamp

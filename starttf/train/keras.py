@@ -88,6 +88,7 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
     :param log_suffix: A suffix for the log folder, so you can remember what was special about the run.
     :return:
     """
+    hyper_params.immutable = True
     starttf.hyperparams = hyper_params
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
     chkpt_path = hyper_params.train.checkpoint_path + "/" + time_stamp
