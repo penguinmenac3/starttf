@@ -31,6 +31,7 @@ import tensorflow as tf
 from hyperparams.hyperparams import import_params, load_params
 
 import starttf
+from starttf.train.params import check_completness
 from starttf.utils.session_config import get_default_config
 from starttf.data.autorecords import create_input_fn, PHASE_TRAIN, PHASE_VALIDATION
 from starttf.utils.plot_losses import create_keras_callbacks
@@ -86,7 +87,7 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
     :param session_config: A configuration for the session.
     :return:
     """
-    hyper_params.check_completness()
+    check_completness(hyper_params)
     starttf.hyperparams = hyper_params
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
     chkpt_path = hyper_params.train.checkpoint_path + "/" + time_stamp

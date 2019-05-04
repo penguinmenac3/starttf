@@ -28,6 +28,7 @@ from setproctitle import setproctitle
 import tensorflow as tf
 from hyperparams.hyperparams import import_params, load_params
 import starttf
+from starttf.train.params import check_completness
 from starttf.utils.create_optimizer import create_keras_optimizer
 
 
@@ -63,7 +64,7 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None,
                             continue_training=False, continue_with_specific_checkpointpath=None, no_artifacts=False,
                             train_fn=__train, eval_fn=__eval, create_optimizer=create_keras_optimizer):
     hyperparams.immutable = True
-    hyperparams.check_completness()
+    check_completness(hyperparams)
     starttf.hyperparams = hyperparams
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
     chkpt_path = hyperparams.train.checkpoint_path + "/" + time_stamp
