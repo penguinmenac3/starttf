@@ -41,10 +41,11 @@ def __train(model, dataset, optimizer, loss_fn):
     i = 0
     N = len(dataset)
     for x, y in dataset:
+        tf.keras.backend.set_learning_phase(1)
         with tf.GradientTape() as tape:
-            x["training"] = True
             prediction = model(**x)
             loss = loss_fn(y, prediction)
+        tf.keras.backend.set_learning_phase(0)
         gradients = tape.gradient(loss, model.trainable_variables)
         optimizer.apply_gradients(gradients, model.trainable_variables)
         print("\rBatch {}/{} - {}".format(i+1, N, loss), end="")

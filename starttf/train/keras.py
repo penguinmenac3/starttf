@@ -158,7 +158,6 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
 
         input_tensor = {k: tf.keras.layers.Input(shape=train_features[k].get_shape().as_list(), name=k) for k in train_features}
         target_placeholders = {k: tf.placeholder(shape=(None,) + train_labels[k].shape[1:], dtype=train_labels[k].dtype, name=k + "_placeholder") for k in train_labels}
-        input_tensor["training"] = True
         model = model.create_keras_model(**input_tensor)
         # model.metrics_names = [k for k in metrics]
         model.compile(loss=losses, optimizer=optimizer, metrics=metrics, target_tensors=target_placeholders)
@@ -177,7 +176,6 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
         train_labels = training_data[0][1]
         input_tensor = {k: tf.keras.layers.Input(shape=train_features[k].shape[1:], name=k) for k in train_features}
         target_placeholders = {k: tf.placeholder(shape=(None,) + train_labels[k].shape[1:], dtype=train_labels[k].dtype, name=k + "_placeholder") for k in train_labels}
-        input_tensor["training"] = True
         model = model.create_keras_model(**input_tensor)
         # model.metrics_names = [k for k in metrics]
         model.compile(loss=losses, optimizer=optimizer, metrics=metrics, target_tensors=target_placeholders)
