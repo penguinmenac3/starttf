@@ -27,7 +27,7 @@ def main(args):
             hyperparams = import_params(args[idx])
         name = hyperparams.train.get("experiment_name", "unnamed")
         setproctitle("train {}".format(name))
-        return easy_train_and_evaluate(hyperparams, continue_training=continue_training, log_suffix=name, no_artifacts=no_artifacts)
+        return easy_train_and_evaluate(hyperparams, continue_training=continue_training, no_artifacts=no_artifacts)
     else:
         print("Usage: python -m starttf.train [--continue] hyperparameters/myparams.py")
         return None
