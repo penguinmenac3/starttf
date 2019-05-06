@@ -13,7 +13,7 @@ def check_completness(params):
     assert __has_attribute(params.train, "learning_rate")
     assert __has_attribute(params.train.learning_rate, "type")
     assert __has_attribute(params.train.learning_rate, "start_value")
-    if params.train.learning_rate == "exponential":
+    if params.train.learning_rate.type == "exponential":
         assert __has_attribute(params.train.learning_rate, "end_value")
     assert __has_attribute(params.train, "optimizer")
     assert __has_attribute(params.train.optimizer, "type")
