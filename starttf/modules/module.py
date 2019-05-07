@@ -189,12 +189,13 @@ class Module(object):
         if self.keras and self.__model is not None:
             outputs = self.__model.predict(inputs)
             outputs = dict(zip(self.__outputs, outputs))
-            # Unpack since it gives a batch of 1 output
-            if isinstance(outputs, dict):
-                outputs = {k: outputs[k][0] for k in outputs.keys()}
-            else:
-                outputs = outputs[0]
             return outputs
+            # Unpack since it gives a batch of 1 output
+            #if isinstance(outputs, dict):
+            #    outputs = {k: outputs[k][0] for k in outputs.keys()}
+            #else:
+            #    outputs = outputs[0]
+            #return outputs
         elif self.tensorflow and self.__model is not None:
             sess = tf.get_default_session()
             if input_placeholders is None:
