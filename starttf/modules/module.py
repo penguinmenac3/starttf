@@ -41,6 +41,7 @@ class Module(object):
         if starttf.modules.log_calls:
             print("{}.__init__".format(name))
         self.__name = name
+        self.__outputs = None
         self.__model = None
         if starttf.hyperparams is None and starttf.hyperparams is not starttf.NO_PARAMS:
             raise RuntimeWarning("You did not set starttf.modules.hyperparams. You may want to consider setting it to starttf.modules.NO_PARAMS if this was intentional")
@@ -118,6 +119,7 @@ class Module(object):
             if isinstance(output_tensors, tuple):
                 output_tensors = output_tensors.__dict__
             self.__model = output_tensors
+            self.__outputs = list(output_tensors.keys())
             return self.__model
 
     def create_keras_model(self, **kwargs):
@@ -134,7 +136,8 @@ class Module(object):
 
             input_tensor_order = sorted(list(input_tensor.keys()))
             inputs = [input_tensor[k] for k in input_tensor_order]
-            outputs = [tf.keras.layers.Lambda(lambda x: x, name=k)(output_tensors[k]) for k in output_tensors]
+            self.__outputs = list(output_tensors.keys())
+            outputs = [tf.keras.layers.Lambda(lambda x: x, name=k)(output_tensors[k]) for k in self.__outputs]
 
             model = tf.keras.Model(inputs=inputs, outputs=outputs)
             self.__model = model
@@ -150,14 +153,15 @@ class Module(object):
                 # If it is not a keras model it is a tensorflow checkpoint
                 model_path = checkpoint_path
         if (model_path.endswith(".h5") or model_path.endswith(".hdf5")) and os.path.exists(model_path):
-            input_dict = {k: tf.keras.layers.Input(dtype=input_dtypes_dict[k], shape=input_shapes_dict[k], name="input_{}".format(k)) for k in input_shapes_dict.keys()}
-            self.__model = self.create_keras_model(input_dict)
+            input_dict = {k: tf.keras.layers.Input(dtype=input_dtypes_dict[k], shape=input_shapes_dict[k], name="{}".format(k)) for k in input_shapes_dict.keys()}
+            self.__input_dict = input_dict
+            self.__model = self.create_keras_model(**input_dict)
             self.__model.load_weights(model_path)
         elif os.path.exists(model_path):
             saver = tf.train.Saver()
-            input_dict = {k: tf.placeholder(dtype=input_dtypes_dict[k], shape=input_shapes_dict[k], name="input_{}".format(k)) for k in input_shapes_dict.keys()}
+            input_dict = {k: tf.placeholder(dtype=input_dtypes_dict[k], shape=input_shapes_dict[k], name="{}".format(k)) for k in input_shapes_dict.keys()}
             self.__input_dict = input_dict
-            self.__model = self.create_tf_model(input_dict)
+            self.__model = self.create_tf_model(**input_dict)
             saver.restore(tf.get_default_session(), model_path)
         else:
             raise RuntimeError("The specified model does not exist!")
@@ -183,7 +187,8 @@ class Module(object):
         Predict the outputs of a model given some inputs.
         """
         if self.keras and self.__model is not None:
-            outputs = self.__model([inputs])
+            outputs = self.__model.predict(inputs)
+            outputs = dict(zip(self.__outputs, outputs))
             # Unpack since it gives a batch of 1 output
             if isinstance(outputs, dict):
                 outputs = {k: outputs[k][0] for k in outputs.keys()}
