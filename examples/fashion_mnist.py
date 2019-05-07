@@ -53,10 +53,10 @@ class FashionMnistDataset(SimpleSequence):
         label = np.zeros(shape=(10,), dtype="float32")
         if self.training:
             label[self.trainY[idx]] = 1
-            return {"features": self.trainX[idx]}, {"class_id": label}
+            return {"features": np.array(self.trainX[idx], dtype="float32")}, {"class_id": label}
         else:
             label[self.valY[idx]] = 1
-            return {"features": self.valX[idx]}, {"class_id": label}
+            return {"features": np.array(self.valX[idx], dtype="float32")}, {"class_id": label}
 
 
 class FashionMnistModel(Module):
