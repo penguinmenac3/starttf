@@ -1,17 +1,17 @@
 # MIT License
-# 
+#
 # Copyright (c) 2018-2019 Michael Fuerst
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -53,22 +53,22 @@ def create_optimizer(params):
         momentum = params.train.optimizer.get("momentum", 0.0)
         epsilon = params.train.optimizer.get("epsilon", 1e-10)
         optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate, decay=decay, momentum=momentum,
-                                             epsilon=epsilon)
+                                              epsilon=epsilon)
     elif params.train.optimizer.type == "adadelta":
         rho = params.train.optimizer.get("rho", 0.95)
         epsilon = params.train.optimizer.get("epsilon", 1e-08)
         optimizer = tf.train.AdadeltaOptimizer(learning_rate=learning_rate, rho=rho,
-                                              epsilon=epsilon)
+                                               epsilon=epsilon)
     elif params.train.optimizer.type == "adagrad":
         initial_accumulator_value = params.train.optimizer.get("initial_accumulator_value", 0.1)
         optimizer = tf.train.AdagradOptimizer(learning_rate=learning_rate,
-                                             initial_accumulator_value=initial_accumulator_value)
+                                              initial_accumulator_value=initial_accumulator_value)
     elif params.train.optimizer.type == "adam":
         beta1 = params.train.optimizer.get("beta1", 0.9)
         beta2 = params.train.optimizer.get("beta2", 0.999)
         epsilon = params.train.optimizer.get("epsilon", 1e-08)
         optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=beta1, beta2=beta2,
-                                          epsilon=epsilon)
+                                           epsilon=epsilon)
     else:
         raise RuntimeError("Unknown optimizer: %s" % params.train.optimizer.type)
 
@@ -76,7 +76,7 @@ def create_optimizer(params):
 
 
 def create_keras_optimizer(params):
-    #with tf.variable_scope("optimizer"):
+    # with tf.variable_scope("optimizer"):
     lr_fn = None
     if params.train.learning_rate.type == "exponential":
         def exp_decay(epoch):
@@ -86,7 +86,7 @@ def create_keras_optimizer(params):
             return lrate
         lr_fn = exp_decay
         tf.summary.scalar('hyper_params/lr/start_value',
-                            tf.constant(params.train.learning_rate.start_value))
+                          tf.constant(params.train.learning_rate.start_value))
         tf.summary.scalar('hyper_params/lr/end_value', tf.constant(params.train.learning_rate.end_value))
     elif params.train.learning_rate.type == "const":
         def const_lr(epoch):
@@ -94,7 +94,7 @@ def create_keras_optimizer(params):
             return initial_lrate
         lr_fn = const_lr
         tf.summary.scalar('hyper_params/lr/start_value',
-                            tf.constant(params.train.learning_rate.start_value))
+                          tf.constant(params.train.learning_rate.start_value))
     else:
         raise RuntimeError("Unknown learning rate: %s" % params.train.learning_rate.type)
     lr_scheduler = LearningRateScheduler(lr_fn)

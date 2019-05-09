@@ -1,17 +1,17 @@
 # MIT License
-# 
+#
 # Copyright (c) 2018-2019 Michael Fuerst
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,6 +27,7 @@ import traceback
 TEST_RESULTS_FILENAME = "test_results.txt"
 DIVIDER = "**************************************************************"
 
+
 def run_tests():
     # Runs all functions called test which are in the folder test named "test_*.py"
     # The function has the signature test(old_results: dict, new_results:dict) -> success
@@ -41,7 +42,8 @@ def run_tests():
     failed = []
     tests = []
     if os.path.exists("tests"):
-        tests = ["tests." + f.replace(".py", "") for f in os.listdir("tests") if f.startswith("test_") and f.endswith(".py")]#
+        tests = ["tests." + f.replace(".py", "") for f in os.listdir("tests")
+                 if f.startswith("test_") and f.endswith(".py")]
 
     for test in tests:
         test_case = __import__(test, fromlist=["*"])
@@ -63,7 +65,7 @@ def run_tests():
                     negative += 1
                     failed.append("{}.{}".format(test, k))
                 print()
-    
+
     with open(TEST_RESULTS_FILENAME, "w") as f:
         f.write(json.dumps(new_results, indent=4, sort_keys=True))
 
@@ -77,6 +79,7 @@ def run_tests():
         print("- {}".format(name))
     print()
     return negative == 0
+
 
 def update_setup_py(major_release=False, minor_release=False):
     lines = ""
@@ -98,8 +101,9 @@ def update_setup_py(major_release=False, minor_release=False):
             lines[i] = "__version__ = '" + version + "'\n"
     with open("setup.py", "w") as f:
         f.writelines(lines)
-    
+
     return version
+
 
 def commit_and_push(version):
     # Add changed setup and the test results.
@@ -111,8 +115,10 @@ def commit_and_push(version):
     os.system("git tag " + version)
     os.system("git push origin --tags")
 
+
 def pip_publish():
     print("TODO pip_publish")
+
 
 def main(major_release=False, minor_release=False, dry_run=False):
     if run_tests():
@@ -125,6 +131,7 @@ def main(major_release=False, minor_release=False, dry_run=False):
             print("Released")
     else:
         print("One or more tests failed!")
+
 
 if __name__ == "__main__":
     import sys

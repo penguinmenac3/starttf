@@ -1,17 +1,17 @@
 # MIT License
-# 
+#
 # Copyright (c) 2018-2019 Michael Fuerst
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -108,7 +108,7 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
 
     if not os.path.exists(chkpt_path) and not no_artifacts:
         os.makedirs(chkpt_path)
-        
+
     # If hyperparam config is used
     if model is None:
         p = ".".join(hyper_params.arch.model.split(".")[:-1])
@@ -127,7 +127,7 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
         prepare = prepare.__dict__[n]
         training_data = prepare(hyper_params, PHASE_TRAIN)
         validation_data = prepare(hyper_params, PHASE_VALIDATION)
-        
+
     # TODO save code
 
     # Write hyper parameters to be able to track what config you had.
@@ -154,10 +154,12 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
         train_features, train_labels = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_TRAIN),
                                                        hyper_params.train.batch_size)().make_one_shot_iterator().get_next()
         validation_data = create_input_fn(os.path.join(hyper_params.train.tf_records_path, PHASE_VALIDATION),
-                                                                 hyper_params.train.batch_size)().make_one_shot_iterator().get_next()
+                                          hyper_params.train.batch_size)().make_one_shot_iterator().get_next()
 
-        input_tensor = {k: tf.keras.layers.Input(shape=train_features[k].get_shape().as_list(), name=k) for k in train_features}
-        target_placeholders = {k: tf.placeholder(shape=(None,) + train_labels[k].shape[1:], dtype=train_labels[k].dtype, name=k + "_placeholder") for k in train_labels}
+        input_tensor = {k: tf.keras.layers.Input(
+            shape=train_features[k].get_shape().as_list(), name=k) for k in train_features}
+        target_placeholders = {k: tf.placeholder(
+            shape=(None,) + train_labels[k].shape[1:], dtype=train_labels[k].dtype, name=k + "_placeholder") for k in train_labels}
         model = model.create_keras_model(**input_tensor)
         # model.metrics_names = [k for k in metrics]
         model.compile(loss=losses, optimizer=optimizer, metrics=metrics, target_tensors=target_placeholders)
@@ -175,7 +177,8 @@ def easy_train_and_evaluate(hyper_params, model=None, loss=None,
         train_features = training_data[0][0]
         train_labels = training_data[0][1]
         input_tensor = {k: tf.keras.layers.Input(shape=train_features[k].shape[1:], name=k) for k in train_features}
-        target_placeholders = {k: tf.placeholder(shape=(None,) + train_labels[k].shape[1:], dtype=train_labels[k].dtype, name=k + "_placeholder") for k in train_labels}
+        target_placeholders = {k: tf.placeholder(
+            shape=(None,) + train_labels[k].shape[1:], dtype=train_labels[k].dtype, name=k + "_placeholder") for k in train_labels}
         model = model.create_keras_model(**input_tensor)
         # model.metrics_names = [k for k in metrics]
         model.compile(loss=losses, optimizer=optimizer, metrics=metrics, target_tensors=target_placeholders)

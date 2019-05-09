@@ -1,17 +1,17 @@
 # MIT License
-# 
+#
 # Copyright (c) 2019 Michael Fuerst
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -37,6 +37,7 @@ class Module(object):
     You must implement the call method to use the variables.
     For complex variables might using a build function with @Once annotation can be usefull.
     """
+
     def __init__(self, name, **kwargs):
         if starttf.modules.log_calls:
             print("{}.__init__".format(name))
@@ -44,7 +45,8 @@ class Module(object):
         self.__outputs = None
         self.__model = None
         if starttf.hyperparams is None and starttf.hyperparams is not starttf.NO_PARAMS:
-            raise RuntimeWarning("You did not set starttf.modules.hyperparams. You may want to consider setting it to starttf.modules.NO_PARAMS if this was intentional")
+            raise RuntimeWarning(
+                "You did not set starttf.modules.hyperparams. You may want to consider setting it to starttf.modules.NO_PARAMS if this was intentional")
         self.hyperparams = starttf.hyperparams
         self.lambda_mode = False
         self.__dict__.update(kwargs)
@@ -94,7 +96,7 @@ class Module(object):
             for k in kwargs:
                 print(" {}: {}".format(k, kwargs[k]))
             print()
-        with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE) as scope:    
+        with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE) as scope:
             if self.lambda_mode:
                 return self.__lambda(*args, **kwargs)
             return self.call(*args, **kwargs)
@@ -153,13 +155,15 @@ class Module(object):
                 # If it is not a keras model it is a tensorflow checkpoint
                 model_path = checkpoint_path
         if (model_path.endswith(".h5") or model_path.endswith(".hdf5")) and os.path.exists(model_path):
-            input_dict = {k: tf.keras.layers.Input(dtype=input_dtypes_dict[k], shape=input_shapes_dict[k], name="{}".format(k)) for k in input_shapes_dict.keys()}
+            input_dict = {k: tf.keras.layers.Input(
+                dtype=input_dtypes_dict[k], shape=input_shapes_dict[k], name="{}".format(k)) for k in input_shapes_dict.keys()}
             self.__input_dict = input_dict
             self.__model = self.create_keras_model(**input_dict)
             self.__model.load_weights(model_path)
         elif os.path.exists(model_path):
             saver = tf.train.Saver()
-            input_dict = {k: tf.placeholder(dtype=input_dtypes_dict[k], shape=input_shapes_dict[k], name="{}".format(k)) for k in input_shapes_dict.keys()}
+            input_dict = {k: tf.placeholder(
+                dtype=input_dtypes_dict[k], shape=input_shapes_dict[k], name="{}".format(k)) for k in input_shapes_dict.keys()}
             self.__input_dict = input_dict
             self.__model = self.create_tf_model(**input_dict)
             saver.restore(tf.get_default_session(), model_path)
@@ -180,7 +184,8 @@ class Module(object):
             saver = tf.train.Saver()
             save_path = saver.save(tf.get_default_session(), model_path)
         else:
-            raise RuntimeError("You must first create a tensorflow or keras model directly or load it via the load_model function.")
+            raise RuntimeError(
+                "You must first create a tensorflow or keras model directly or load it via the load_model function.")
 
     def predict(self, inputs, input_placeholders=None):
         """
@@ -191,20 +196,22 @@ class Module(object):
             outputs = dict(zip(self.__outputs, outputs))
             return outputs
             # Unpack since it gives a batch of 1 output
-            #if isinstance(outputs, dict):
+            # if isinstance(outputs, dict):
             #    outputs = {k: outputs[k][0] for k in outputs.keys()}
-            #else:
+            # else:
             #    outputs = outputs[0]
-            #return outputs
+            # return outputs
         elif self.tensorflow and self.__model is not None:
             sess = tf.get_default_session()
             if input_placeholders is None:
                 input_placeholders = self.__input_dict
             if input_placeholders is None:
-                raise RuntimeError("You must either provide your input_placeholders or create the model via load_model(...)!")
+                raise RuntimeError(
+                    "You must either provide your input_placeholders or create the model via load_model(...)!")
             feed_dict = {input_placeholders[k]: inputs[k] for k in inputs.keys()}
             outputs = sess.run(self.__model, feed_dict=feed_dict)
             # TODO is input batch packing or output batch unpacking required?
             return outputs
         else:
-            raise RuntimeError("You must first create a tensorflow or keras model directly or load it via the load_model function.")
+            raise RuntimeError(
+                "You must first create a tensorflow or keras model directly or load it via the load_model function.")

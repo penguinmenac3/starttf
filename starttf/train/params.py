@@ -4,6 +4,7 @@ from hyperparams import HyperParams as OriginalParams
 def __has_attribute(obj, name):
     return name in obj.__dict__ and obj.__dict__[name] is not None
 
+
 def check_completness(params):
     # Check for training parameters
     assert __has_attribute(params, "train")

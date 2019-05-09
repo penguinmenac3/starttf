@@ -3,6 +3,7 @@ import os
 import numpy as np
 from examples.fashion_mnist import FashionMnistModel, FashionMnistDataset, FashionMnistParams
 
+
 def main():
     hyperparams = FashionMnistParams()
     hyperparams.train.batch_size = 1
@@ -13,7 +14,8 @@ def main():
     input_dtypes_dict = {k: features[k].dtype for k in features}
 
     model = FashionMnistModel()
-    latest_checkpoint = os.path.join(hyperparams.train.checkpoint_path, sorted(os.listdir(hyperparams.train.checkpoint_path))[-1])
+    latest_checkpoint = os.path.join(hyperparams.train.checkpoint_path, sorted(
+        os.listdir(hyperparams.train.checkpoint_path))[-1])
     print("Loading Checkpoint: {}".format(latest_checkpoint))
     model.load_model(latest_checkpoint, input_shapes_dict, input_dtypes_dict)
 
@@ -26,6 +28,7 @@ def main():
         else:
             wrong += 1
     print("Accuracy: {}%".format(100 * correct / (correct + wrong)))
+
 
 if __name__ == "__main__":
     main()

@@ -1,17 +1,17 @@
 # MIT License
-# 
+#
 # Copyright (c) 2018-2019 Michael Fuerst
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -40,9 +40,9 @@ def crop(img, start_y, start_x, h, w):
 
 def crop_center(img, cropy, cropx):
     y, x, _ = img.shape
-    startx = x//2-(cropx//2)
-    starty = y//2-(cropy//2)
-    return img[starty:starty+cropy, startx:startx+cropx, :]
+    startx = x // 2 - (cropx // 2)
+    starty = y // 2 - (cropy // 2)
+    return img[starty:starty + cropy, startx:startx + cropx, :]
 
 
 def resize_image_with_crop_or_pad(img, target_height, target_width):
@@ -72,33 +72,33 @@ def resize_image_with_crop_or_pad(img, target_height, target_width):
 
 
 def _rotatedRectWithMaxArea(w, h, angle):
-  """
-  Given a rectangle of size wxh that has been rotated by 'angle' (in
-  radians), computes the width and height of the largest possible
-  axis-aligned rectangle (maximal area) within the rotated rectangle.
+    """
+    Given a rectangle of size wxh that has been rotated by 'angle' (in
+    radians), computes the width and height of the largest possible
+    axis-aligned rectangle (maximal area) within the rotated rectangle.
 
-  Answer from: https://stackoverflow.com/questions/16702966/rotate-image-and-crop-out-black-borders
-  """
-  if w <= 0 or h <= 0:
-    return 0,0
+    Answer from: https://stackoverflow.com/questions/16702966/rotate-image-and-crop-out-black-borders
+    """
+    if w <= 0 or h <= 0:
+        return 0, 0
 
-  width_is_longer = w >= h
-  side_long, side_short = (w,h) if width_is_longer else (h,w)
+    width_is_longer = w >= h
+    side_long, side_short = (w, h) if width_is_longer else (h, w)
 
-  # since the solutions for angle, -angle and 180-angle are all the same,
-  # if suffices to look at the first quadrant and the absolute values of sin,cos:
-  sin_a, cos_a = abs(math.sin(angle)), abs(math.cos(angle))
-  if side_short <= 2.*sin_a*cos_a*side_long or abs(sin_a-cos_a) < 1e-10:
-    # half constrained case: two crop corners touch the longer side,
-    #   the other two corners are on the mid-line parallel to the longer line
-    x = 0.5*side_short
-    wr,hr = (x/sin_a,x/cos_a) if width_is_longer else (x/cos_a,x/sin_a)
-  else:
-    # fully constrained case: crop touches all 4 sides
-    cos_2a = cos_a*cos_a - sin_a*sin_a
-    wr,hr = (w*cos_a - h*sin_a)/cos_2a, (h*cos_a - w*sin_a)/cos_2a
+    # since the solutions for angle, -angle and 180-angle are all the same,
+    # if suffices to look at the first quadrant and the absolute values of sin,cos:
+    sin_a, cos_a = abs(math.sin(angle)), abs(math.cos(angle))
+    if side_short <= 2. * sin_a * cos_a * side_long or abs(sin_a - cos_a) < 1e-10:
+        # half constrained case: two crop corners touch the longer side,
+        #   the other two corners are on the mid-line parallel to the longer line
+        x = 0.5 * side_short
+        wr, hr = (x / sin_a, x / cos_a) if width_is_longer else (x / cos_a, x / sin_a)
+    else:
+        # fully constrained case: crop touches all 4 sides
+        cos_2a = cos_a * cos_a - sin_a * sin_a
+        wr, hr = (w * cos_a - h * sin_a) / cos_2a, (h * cos_a - w * sin_a) / cos_2a
 
-  return wr,hr
+    return wr, hr
 
 
 def rotate_img_and_crop(img, angle):

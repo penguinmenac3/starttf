@@ -1,17 +1,17 @@
 # MIT License
-# 
+#
 # Copyright (c) 2018-2019 Michael Fuerst
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -177,6 +177,6 @@ def focus_loss(labels, probs, loss, gamma):
     """
     # Compute p_t that is used in paper.
     # FIXME is it possible that the 1-p term does not make any sense?
-    p_t = tf.reduce_sum(probs * labels, axis=-1)# + tf.reduce_sum((1.0 - probs) * (1.0 - labels), axis=-1)
+    p_t = tf.reduce_sum(probs * labels, axis=-1)  # + tf.reduce_sum((1.0 - probs) * (1.0 - labels), axis=-1)
     focal_factor = tf.pow(1.0 - p_t, gamma) if gamma > 0 else 1  # Improve stability for gamma = 0
     return tf.stop_gradient(focal_factor) * loss

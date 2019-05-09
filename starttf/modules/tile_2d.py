@@ -1,17 +1,17 @@
 # MIT License
-# 
+#
 # Copyright (c) 2018-2019 Michael Fuerst
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -60,7 +60,7 @@ class Tile2D(Module):
         tmp = tf.reshape(tmp, (batch_size, w, int(h * self.k_y), int(c / (self.k_y))))
         tmp = tf.transpose(tmp, [0, 2, 1, 3])
         tmp = tf.reshape(tmp, (batch_size, int(h * self.k_y), int(w * self.k_x), int(c / (self.k_y * self.k_x))))
-        
+
         return tmp
 
 
@@ -69,7 +69,7 @@ class InverseTile2D(Module):
         super().__init__(name, lambda_mode=True)
         self.k_x = k_x
         self.k_y = k_y
-    
+
     def call(self, input_tensor):
         """
             An inverse tiling layer.
@@ -114,7 +114,7 @@ class FeaturePassthrough(Module):
         super().__init__(name, lambda_mode=True)
         self.filters = filters
         self.kernel_size = kernel_size
-    
+
     @RunOnce
     def build(self, early_feat, late_feat):
         _, h_early, w_early, c_early = early_feat.get_shape().as_list()
@@ -125,7 +125,8 @@ class FeaturePassthrough(Module):
 
         assert h_late * s_y == h_early and w_late * s_x == w_early
 
-        self.early_conv = Conv2D(filters=self.filters, kernel_size=(s_x * self.kernel_size[0], s_y * self.kernel_size[1]), strides=(s_x, s_y), padding="same")
+        self.early_conv = Conv2D(filters=self.filters, kernel_size=(
+            s_x * self.kernel_size[0], s_y * self.kernel_size[1]), strides=(s_x, s_y), padding="same")
         self.late_conv = Conv2D(filters=self.filters, kernel_size=self.kernel_size, strides=(1, 1), padding="same")
 
     def call(self, early_feat, late_feat):
@@ -148,7 +149,7 @@ class UpsamplingFeaturePassthrough(Module):
     def __init__(self, filters, kernel_size=(1, 1), name="UpsamplingFeaturePassthrough"):
         """
         Create an upsampling feature passthrough.
-        
+
         :param filters: The number of convolution filters.
         :param kernel_size: The size of the kernel. Default (1x1).
         :param name: The name of the layer.
@@ -156,7 +157,7 @@ class UpsamplingFeaturePassthrough(Module):
         super().__init__(name, lambda_mode=True)
         self.filters = filters
         self.kernel_size = kernel_size
-    
+
     @RunOnce
     def build(self, early_feat, late_feat):
         _, h_early, w_early, c_early = early_feat.get_shape().as_list()
@@ -168,7 +169,7 @@ class UpsamplingFeaturePassthrough(Module):
         assert h_late * s_y == h_early and w_late * s_x == w_early
 
         self.tiling = Tile2D(s_x, s_y)
-        self.conv = Conv2D(filters=self.filters, kernel_size=self.kernel_size, strides=(1, 1),padding="same")
+        self.conv = Conv2D(filters=self.filters, kernel_size=self.kernel_size, strides=(1, 1), padding="same")
 
     def call(self, early_feat, late_feat):
         """

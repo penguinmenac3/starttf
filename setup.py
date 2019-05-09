@@ -26,9 +26,9 @@ setup(
     download_url='https://github.com/penguinmenac3/starttf/tarball/' + __version__,
     license='BSD',
     classifiers=[
-      'Development Status :: 3 - Alpha',
-      'Intended Audience :: Developers',
-      'Programming Language :: Python',
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Developers',
+        'Programming Language :: Python',
     ],
     keywords='',
     packages=find_packages(exclude=['examples', 'docs', 'tests*']),

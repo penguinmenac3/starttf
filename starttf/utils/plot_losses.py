@@ -1,17 +1,17 @@
 # MIT License
-# 
+#
 # Copyright (c) 2018-2019 Michael Fuerst
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -36,8 +36,10 @@ except ModuleNotFoundError:
 def create_keras_callbacks(hyperparams, log_dir, no_artifacts=False):
     callbacks = []
     if not no_artifacts:
-        callbacks.append(TrainValTensorBoard(log_dir=log_dir, summary_steps=hyperparams.train.summary_steps, histogram_freq=0, batch_size=hyperparams.train.batch_size, write_grads=False, write_images=False))
-        callbacks.append(tf.keras.callbacks.ModelCheckpoint(log_dir + "/model.hdf5", monitor='val_loss', save_best_only=True, mode='auto'))
+        callbacks.append(TrainValTensorBoard(log_dir=log_dir, summary_steps=hyperparams.train.summary_steps,
+                                             histogram_freq=0, batch_size=hyperparams.train.batch_size, write_grads=False, write_images=False))
+        callbacks.append(tf.keras.callbacks.ModelCheckpoint(log_dir + "/model.hdf5",
+                                                            monitor='val_loss', save_best_only=True, mode='auto'))
         callbacks.append(tf.keras.callbacks.CSVLogger(log_dir + "/results.csv", separator=','))
     callbacks.append(tf.keras.callbacks.TerminateOnNaN())
     return callbacks
@@ -175,7 +177,8 @@ class DefaultLossCallback(tf.train.SessionRunHook):
                 clear_output()
 
             if self.mode != "eval":
-                print("{}: Step {}, Loss {}".format(self.mode, self.report_storage[self.mode]["step"][-1], self.report_storage[self.mode]["loss"][-1]))
+                print("{}: Step {}, Loss {}".format(
+                    self.mode, self.report_storage[self.mode]["step"][-1], self.report_storage[self.mode]["loss"][-1]))
                 self.plot_all()
                 with open(self.checkpoint_dir + "/images/record_storage.json", "w") as f:
                     f.write(json.dumps(self.report_storage, sort_keys=True, indent=4))

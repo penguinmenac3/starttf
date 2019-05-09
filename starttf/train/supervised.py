@@ -1,17 +1,17 @@
 # MIT License
-# 
+#
 # Copyright (c) 2019 Michael Fuerst
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -36,7 +36,7 @@ PHASE_TRAIN = "train"
 PHASE_VALIDATION = "validation"
 
 
-#@tf.function
+# @tf.function
 def __train(model, dataset, optimizer, loss_fn):
     i = 0
     N = len(dataset)
@@ -48,16 +48,19 @@ def __train(model, dataset, optimizer, loss_fn):
         tf.keras.backend.set_learning_phase(0)
         gradients = tape.gradient(loss, model.trainable_variables)
         optimizer.apply_gradients(gradients, model.trainable_variables)
-        print("\rBatch {}/{} - {}".format(i+1, N, loss), end="")
+        print("\rBatch {}/{} - {}".format(i + 1, N, loss), end="")
         i += 1
 
-#@tf.function
+# @tf.function
+
+
 def __eval(model, dataset, eval_fn):
     total_loss = 0
     for x, y in dataset:
         prediction = model(x, training=False)
         total_loss += eval_fn(y, prediction)
     return total_loss / len(dataset)
+
 
 def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None,
                             training_data=None, validation_data=None,
@@ -120,7 +123,7 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None,
     for i in range(epochs):
         train_fn(model, training_data, optimizer, loss)
         score = eval_fn(model, validation_data, evaluator)
-        print("\rEpoch {}/{} - {}".format(i+1, epochs, score))
+        print("\rEpoch {}/{} - {}".format(i + 1, epochs, score))
 
     return chkpt_path
 

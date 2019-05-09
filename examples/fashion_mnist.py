@@ -26,7 +26,7 @@ class FashionMnistParams(HyperParams):
         self.train.learning_rate.type = "exponential"
         self.train.learning_rate.start_value = 0.001
         self.train.learning_rate.end_value = 0.0001
-        
+
         self.arch.model = "examples.fashion_mnist.FashionMnistModel"
         self.arch.loss = "examples.fashion_mnist.FashionMnistLoss"
         self.arch.eval = "examples.fashion_mnist.FashionMnistLoss"
@@ -67,21 +67,25 @@ class FashionMnistModel(Module):
         self.layers = []
         self.layers.append(Lambda(lambda x: tf.keras.backend.expand_dims(x)))
         self.layers.append(BatchNormalization())
-        self.layers.append(Conv2D(filters=12, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3), padding="same", activation="relu", kernel_initializer=Orthogonal()))
+        self.layers.append(Conv2D(filters=12, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
+                                  padding="same", activation="relu", kernel_initializer=Orthogonal()))
         self.layers.append(MaxPooling2D())
 
         self.layers.append(BatchNormalization())
-        self.layers.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3), padding="same", activation="relu", kernel_initializer=Orthogonal()))
-        self.layers.append(MaxPooling2D())
-        
-        self.layers.append(BatchNormalization())
-        self.layers.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3), padding="same", activation="relu", kernel_initializer=Orthogonal()))
+        self.layers.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
+                                  padding="same", activation="relu", kernel_initializer=Orthogonal()))
         self.layers.append(MaxPooling2D())
 
         self.layers.append(BatchNormalization())
-        self.layers.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3), padding="same", activation="relu", kernel_initializer=Orthogonal()))
+        self.layers.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
+                                  padding="same", activation="relu", kernel_initializer=Orthogonal()))
+        self.layers.append(MaxPooling2D())
+
+        self.layers.append(BatchNormalization())
+        self.layers.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
+                                  padding="same", activation="relu", kernel_initializer=Orthogonal()))
         self.layers.append(GlobalAveragePooling2D())
-       
+
         self.layers.append(BatchNormalization())
         self.layers.append(Dense(units=num_outputs, activation="softmax", kernel_initializer=Orthogonal()))
 
@@ -103,7 +107,6 @@ class FashionMnistLoss(Loss):
 
         mean = tf.reduce_mean(L)
         return tf.reduce_mean(L) + mean_squared_error(mean, L)
-
 
     def mse(self, y_true, y_pred):
         return mean_squared_error(y_true, y_pred)

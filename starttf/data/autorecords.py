@@ -1,17 +1,17 @@
 # MIT License
-# 
+#
 # Copyright (c) 2018-2019 Michael Fuerst
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -90,7 +90,8 @@ def _write_tf_record(hyper_params, sequence, num_threads, i, record_filename, th
                 feature_dict = {}
 
                 for k in feature_batch.keys():
-                    feature_dict['feature_' + k] = _bytes_feature(np.reshape(feature_batch[k][batch_idx], (-1,)).tobytes())
+                    feature_dict['feature_' +
+                                 k] = _bytes_feature(np.reshape(feature_batch[k][batch_idx], (-1,)).tobytes())
                 for k in label_batch.keys():
                     feature_dict['label_' + k] = _bytes_feature(np.reshape(label_batch[k][batch_idx], (-1,)).tobytes())
 
@@ -180,7 +181,8 @@ def _read_data_legacy(prefix, batch_size):
     config = json.load(open(prefix + '_config.json'))
     num_threads = config["num_threads"]
 
-    filenames = [folder + "/" + f for f in listdir(folder) if isfile(join(folder, f)) and phase in f and not "config.json" in f]
+    filenames = [folder + "/" + f for f in listdir(folder) if isfile(join(folder, f))
+                 and phase in f and not "config.json" in f]
 
     # Create a tf object for the filename list and the readers.
     filename_queue = tf.train.string_input_producer(filenames)
@@ -199,7 +201,7 @@ def _read_data_legacy(prefix, batch_size):
     label_batch = {}
     for k in batch_dict.keys():
         shape = tuple([batch_size] + list(config[k]["shape"]))
-        tensor = tf.reshape(batch_dict[k], shape, name="input/"+phase+"/" + k + "_reshape")
+        tensor = tf.reshape(batch_dict[k], shape, name="input/" + phase + "/" + k + "_reshape")
         if "feature_" in k:
             feature_batch["_".join(k.split("_")[1:])] = tensor
         if "label_" in k:
@@ -223,7 +225,8 @@ def _read_data(prefix, batch_size, augmentation=None):
     config = json.load(open(prefix + '_config.json'))
     num_threads = config["num_threads"]
 
-    filenames = [folder + "/" + f for f in listdir(folder) if isfile(join(folder, f)) and phase in f and not "config.json" in f]
+    filenames = [folder + "/" + f for f in listdir(folder) if isfile(join(folder, f))
+                 and phase in f and not "config.json" in f]
 
     dataset = tf.data.TFRecordDataset(filenames=filenames, num_parallel_reads=num_threads)
     dataset = dataset.shuffle(buffer_size=10 * batch_size)
@@ -275,7 +278,8 @@ def write_data(hyper_params,
     :return:
     """
     if not isinstance(sequence, Sequence) and not (callable(getattr(sequence, "__getitem__", None)) and callable(getattr(sequence, "__len__", None))):
-        raise ValueError("sequence must be tf.keras.utils.Sequence or a subtype or implement __len__(self) and __getitem__(self, idx)")
+        raise ValueError(
+            "sequence must be tf.keras.utils.Sequence or a subtype or implement __len__(self) and __getitem__(self, idx)")
     prefix = os.path.join(hyper_params.train.get("tf_records_path", "tfrecords"), mode)
     prefix = prefix.replace("\\", "/")
     data_tmp_folder = "/".join(prefix.split("/")[:-1])

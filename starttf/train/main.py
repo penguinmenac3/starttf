@@ -10,6 +10,7 @@ if tf.__version__.startswith("1."):
 else:
     from starttf.train.supervised import easy_train_and_evaluate
 
+
 def main(args):
     if len(args) == 2 or len(args) == 3:
         continue_training = False
