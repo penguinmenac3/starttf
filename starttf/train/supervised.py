@@ -36,37 +36,65 @@ PHASE_TRAIN = "train"
 PHASE_VALIDATION = "validation"
 
 
+def __dict_to_str(data):
+    out = []
+    for k in data:
+        if isinstance(data[k], list):
+            for i in data[k]:
+                name = i.__name__
+                if isinstance(i, tf.Module):
+                    name = i.name
+                out.append("{}_{}={:.3f}".format(k, name, data[k].numpy()))
+        else:
+            out.append("{}={:.3f}".format(k, data[k].numpy()))
+    return " - ".join(out)
+
+
 # @tf.function
-def __train(model, dataset, optimizer, loss_fn):
+def __train(model, dataset, optimizer, loss, metrics, step):
     i = 0
     N = len(dataset)
+    tf.keras.backend.set_learning_phase(1)
     for x, y in dataset:
-        tf.keras.backend.set_learning_phase(1)
         with tf.GradientTape() as tape:
             prediction = model(**x)
-            loss = loss_fn(y, prediction)
-        tf.keras.backend.set_learning_phase(0)
-        gradients = tape.gradient(loss, model.trainable_variables)
+            loss_results = loss(y, prediction)
+            metrics(y, prediction)
+        gradients = tape.gradient(loss_results, model.trainable_variables)
         optimizer.apply_gradients(gradients, model.trainable_variables)
-        print("\rBatch {}/{} - {}".format(i + 1, N, loss), end="")
+        print("\rBatch {}/{} - {} - {}".format(i + 1, N, __dict_to_str(loss.values), __dict_to_str(metrics.values)), end="")
+        if i % starttf.hyperparams.train.log_steps == 0:
+            for k in loss.values:
+                tf.summary.scalar("loss/{}".format(k), loss.values[k],
+                                  step=step + i * starttf.hyperparams.train.batch_size)
+            for k in metrics.values:
+                tf.summary.scalar("metrics/{}".format(k),
+                                  metrics.values[k], step=step + i * starttf.hyperparams.train.batch_size)
         i += 1
+    tf.keras.backend.set_learning_phase(0)
+
 
 # @tf.function
-
-
-def __eval(model, dataset, eval_fn):
-    total_loss = 0
+def __validate(model, dataset, loss, metrics, step):
+    tf.keras.backend.set_learning_phase(0)
     for x, y in dataset:
-        prediction = model(x, training=False)
-        total_loss += eval_fn(y, prediction)
-    return total_loss / len(dataset)
+        prediction = model(**x)
+        loss(y, prediction)
+        metrics(y, prediction)
+    for k in loss.avg:
+        tf.summary.scalar("loss/{}".format(k), loss.avg[k],
+                          step=step)
+    for k in metrics.avg:
+        tf.summary.scalar("metrics/{}".format(k),
+                          metrics.avg[k], step=step)
+    return loss.avg, metrics.avg
 
 
-def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None,
+def easy_train_and_evaluate(hyperparams, model=None, loss=None, metrics=None,
                             training_data=None, validation_data=None,
                             optimizer=None, epochs=None,
-                            continue_training=False, continue_with_specific_checkpointpath=None, no_artifacts=False,
-                            train_fn=__train, eval_fn=__eval, create_optimizer=create_keras_optimizer):
+                            continue_training=False, continue_with_specific_checkpointpath=None,
+                            train_fn=__train, validation_fn=__validate, create_optimizer=create_keras_optimizer):
     hyperparams.immutable = True
     check_completness(hyperparams)
     starttf.hyperparams = hyperparams
@@ -82,10 +110,14 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None,
         chkpt_path = hyperparams.train.checkpoint_path + "/" + chkpts[-1]
         print("Latest found checkpoint: {}".format(chkpt_path))
 
-    if not os.path.exists(chkpt_path) and not no_artifacts:
-        os.makedirs(chkpt_path)
+    if not os.path.exists(chkpt_path + "/train"):
+        os.makedirs(chkpt_path + "/train")
+    if not os.path.exists(chkpt_path + "/val"):
+        os.makedirs(chkpt_path + "/val")
 
-    # TODO setup tensorboard logging and checkpoints as well as model saving (when not no_artifacts)
+    # Summary writers
+    train_summary_writer = tf.summary.create_file_writer(chkpt_path + "/train")
+    val_summary_writer = tf.summary.create_file_writer(chkpt_path + "/val")
 
     # Try to retrieve optional arguments from hyperparams if not specified
     if model is None:
@@ -98,11 +130,11 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None,
         n = hyperparams.arch.loss.split(".")[-1]
         arch_loss = __import__(p, fromlist=[n])
         loss = arch_loss.__dict__[n]()
-    if evaluator is None and hyperparams.arch.get("eval", None) is not None:
-        p = ".".join(hyperparams.arch.eval.split(".")[:-1])
-        n = hyperparams.arch.eval.split(".")[-1]
+    if metrics is None and hyperparams.arch.get("metrics", None) is not None:
+        p = ".".join(hyperparams.arch.metrics.split(".")[:-1])
+        n = hyperparams.arch.metrics.split(".")[-1]
         arch_loss = __import__(p, fromlist=[n])
-        evaluator = arch_loss.__dict__[n]()
+        metrics = arch_loss.__dict__[n]()
     if training_data is None and hyperparams.arch.get("prepare", None) is not None:
         p = ".".join(hyperparams.arch.prepare.split(".")[:-1])
         n = hyperparams.arch.prepare.split(".")[-1]
@@ -116,14 +148,30 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, evaluator=None,
         epochs = hyperparams.train.get("epochs", 1)
 
     # Check if all requirements could be retrieved.
-    if model is None or loss is None or evaluator is None or training_data is None or validation_data is None or optimizer is None or epochs is None:
+    if model is None or loss is None or metrics is None or training_data is None or validation_data is None or optimizer is None or epochs is None:
         raise RuntimeError("You must provide all arguments either directly or via hyperparams.")
+
+    # Load Checkpoint
+    ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
+    manager = tf.train.CheckpointManager(ckpt, chkpt_path, max_to_keep=10)
+    ckpt.restore(manager.latest_checkpoint)
 
     print("Epoch {}/{}".format(1, epochs))
     for i in range(epochs):
-        train_fn(model, training_data, optimizer, loss)
-        score = eval_fn(model, validation_data, evaluator)
-        print("\rEpoch {}/{} - {}".format(i + 1, epochs, score))
+        step = i * len(training_data) * starttf.hyperparams.train.batch_size
+        loss.reset()
+        metrics.reset()
+        with train_summary_writer.as_default():
+            train_fn(model, training_data, optimizer, loss, metrics, step)
+        step = (i + 1) * len(training_data) * starttf.hyperparams.train.batch_size
+        loss.reset()
+        metrics.reset()
+        with val_summary_writer.as_default():
+            loss_results, metrics_results = validation_fn(model, validation_data, loss, metrics, step)
+
+        ckpt.step.assign_add(1)
+        save_path = manager.save()
+        print("\nEpoch {}/{} - {} - {}".format(i + 1, epochs, __dict_to_str(loss_results), __dict_to_str(metrics_results)))
 
     return chkpt_path
 

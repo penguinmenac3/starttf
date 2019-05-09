@@ -23,7 +23,7 @@ def check_completness(params):
     assert __has_attribute(params, "arch")
     assert __has_attribute(params.arch, "model")
     assert __has_attribute(params.arch, "loss")
-    assert __has_attribute(params.arch, "eval")
+    assert __has_attribute(params.arch, "metrics")
     assert __has_attribute(params.arch, "prepare")
 
     assert __has_attribute(params, "problem")
@@ -38,6 +38,7 @@ class HyperParams(OriginalParams):
         self.train.experiment_name = None
         self.train.checkpoint_path = "checkpoints"
         self.train.epochs = 50
+        self.train.log_steps = 100
         self.train.learning_rate = OriginalParams()
         self.train.learning_rate.type = "const"
         self.train.learning_rate.start_value = 0.001

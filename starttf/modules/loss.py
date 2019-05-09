@@ -21,15 +21,19 @@
 # SOFTWARE.
 
 import tensorflow as tf
-
+import starttf
 from starttf.modules import Module
 
 
-class CompositeLoss(Module):
-    def __init__(self, name="CompositeLoss"):
+class Loss(Module):
+    def __init__(self, name="Loss"):
         super().__init__(name=name)
         self.losses = {}
-        self.metrics = {}
+        self.avg = {}
+        self.values = {}
+
+    def reset(self):
+        pass
 
     def call(self, y_true, y_pred):
         if self.losses is None:
@@ -37,6 +41,9 @@ class CompositeLoss(Module):
 
         s = 0
         for k in self.losses:
-            s += self.losses[k](y_true[k], y_pred[k])
-
+            val = tf.reduce_mean(self.losses[k](y_true[k], y_pred[k]))
+            self.values[k] = val
+            s += val
+        self.values["total"] = s
+        self.avg = self.values
         return s

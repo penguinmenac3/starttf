@@ -21,15 +21,36 @@
 # SOFTWARE.
 
 import tensorflow as tf
+import starttf
+from starttf.modules import Module
 
 
-def to_keras_layer(tf_function):
-    def _wrap_call(*args, **kwargs):
-        """
-        A generic tensorflow function wrapper for keras.
+class Metrics(Module):
+    def __init__(self, name="Metrics"):
+        super().__init__(name=name)
+        self.metrics = {}
+        self.avg = {}
+        self.values = {}
 
-        Wrap any function that is working with tensors in a keras lambda layer.
-        """
-        layer = tf.keras.layers.Lambda(lambda x: tf_function(*(x[0]), **(x[1])))
-        return layer((args, kwargs))
-    return _wrap_call
+    def reset(self):
+        pass
+
+    def call(self, y_true, y_pred):
+        if self.metrics is None:
+            raise RuntimeError("You must specify self.losses before calling this module.")
+
+        result = {}
+        for k in self.metrics:
+            if not isinstance(self.metrics[k], list):
+                self.metrics[k] = [self.metrics[k]]
+
+            for metric in self.metrics[k]:
+                val = tf.reduce_mean(metric(y_true[k], y_pred[k]))
+                name = metric.__name__
+                if isinstance(metric, tf.Module):
+                    name = metric.name
+                result["{}/{}".format(k, name)] = val
+
+        self.values = result
+        self.avg = self.values
+        return result

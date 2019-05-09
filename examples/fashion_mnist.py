@@ -6,7 +6,7 @@ from tensorflow.keras.regularizers import l2
 from tensorflow.keras.losses import categorical_crossentropy, mean_squared_error
 from tensorflow.keras.metrics import categorical_accuracy
 from tensorflow.keras.initializers import Orthogonal
-from starttf.modules import Module, CompositeLoss as Loss
+from starttf.modules import Module, Loss, Metrics
 from starttf.train import HyperParams
 from opendatalake.simple_sequence import SimpleSequence
 
@@ -29,7 +29,7 @@ class FashionMnistParams(HyperParams):
 
         self.arch.model = "examples.fashion_mnist.FashionMnistModel"
         self.arch.loss = "examples.fashion_mnist.FashionMnistLoss"
-        self.arch.eval = "examples.fashion_mnist.FashionMnistLoss"
+        self.arch.metrics = "examples.fashion_mnist.FashionMnistMetrics"
         self.arch.prepare = "examples.fashion_mnist.FashionMnistDataset"
 
 
@@ -100,6 +100,11 @@ class FashionMnistLoss(Loss):
     def __init__(self):
         super().__init__(name="FashionMnistLoss")
         self.losses = {"class_id": categorical_crossentropy}
+
+
+class FashionMnistMetrics(Metrics):
+    def __init__(self):
+        super().__init__(name="FashionMnistLoss")
         self.metrics = {"class_id": [categorical_crossentropy, categorical_accuracy, self.mse, self.variance_in_loss]}
 
     def categorical_variance_loss(self, y_true, y_pred):
