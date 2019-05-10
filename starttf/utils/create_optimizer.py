@@ -35,16 +35,11 @@ def create_keras_optimizer(params):
             lrate = initial_lrate * math.exp(-k * epoch)
             return lrate
         lr_fn = exp_decay
-        tf.summary.scalar('hyper_params/lr/start_value',
-                          tf.constant(params.train.learning_rate.start_value))
-        tf.summary.scalar('hyper_params/lr/end_value', tf.constant(params.train.learning_rate.end_value))
     elif params.train.learning_rate.type == "const":
         def const_lr(epoch):
             initial_lrate = params.train.learning_rate.start_value
             return initial_lrate
         lr_fn = const_lr
-        tf.summary.scalar('hyper_params/lr/start_value',
-                          tf.constant(params.train.learning_rate.start_value))
     else:
         raise RuntimeError("Unknown learning rate: %s" % params.train.learning_rate.type)
     lr_scheduler = LearningRateScheduler(lr_fn)
@@ -64,7 +59,5 @@ def create_keras_optimizer(params):
         optimizer = tf.keras.optimizers.Adam(lr=learning_rate)
     else:
         raise RuntimeError("Unknown optimizer: %s" % params.train.optimizer.type)
-
-    tf.summary.scalar('hyper_params/lr/learning_rate', optimizer.lr)
 
     return optimizer, lr_scheduler

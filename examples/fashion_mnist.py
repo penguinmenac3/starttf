@@ -16,15 +16,16 @@ class FashionMnistParams(HyperParams):
         super().__init__()
         self.problem.number_of_categories = 10
         self.problem.base_dir = "datasets"
+        #self.problem.tf_records_path = "tfrecords"
 
         self.train.epochs = 20
         self.train.l2_weight = 0.01
-        self.train.batch_size = 64
-        self.train.summary_steps = 50
+        self.train.batch_size = 128
+        self.train.log_steps = 100
         self.train.experiment_name = "%NAME%"
         self.train.checkpoint_path = "checkpoints"
-        self.train.learning_rate.type = "exponential"
-        self.train.learning_rate.start_value = 0.001
+        self.train.learning_rate.type = "const"
+        self.train.learning_rate.start_value = 0.0001
         self.train.learning_rate.end_value = 0.0001
 
         self.arch.model = "examples.fashion_mnist.FashionMnistModel"
@@ -34,8 +35,8 @@ class FashionMnistParams(HyperParams):
 
 
 class FashionMnistDataset(SimpleSequence):
-    def __init__(self, hyperparams, phase):
-        super().__init__(hyperparams, phase)
+    def __init__(self, hyperparams, phase, augmentation_fn=None):
+        super().__init__(hyperparams, phase, augmentation_fn=augmentation_fn)
         ((trainX, trainY), (valX, valY)) = fashion_mnist.load_data()
         self.trainX = trainX
         self.trainY = trainY
@@ -64,30 +65,39 @@ class FashionMnistModel(Module):
         super().__init__(name)
         l2_weight = self.hyperparams.train.l2_weight
         num_outputs = self.hyperparams.problem.number_of_categories
-        self.layers = []
-        self.layers.append(Lambda(lambda x: tf.keras.backend.expand_dims(x)))
-        self.layers.append(BatchNormalization())
-        self.layers.append(Conv2D(filters=12, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
-                                  padding="same", activation="relu", kernel_initializer=Orthogonal()))
-        self.layers.append(MaxPooling2D())
+        layers = []
+        layers.append(Lambda(lambda x: tf.keras.backend.expand_dims(x)))
+        layers.append(BatchNormalization())
+        layers.append(Conv2D(filters=12, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
+                             padding="same", activation="relu", kernel_initializer=Orthogonal()))
+        layers.append(MaxPooling2D())
 
-        self.layers.append(BatchNormalization())
-        self.layers.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
-                                  padding="same", activation="relu", kernel_initializer=Orthogonal()))
-        self.layers.append(MaxPooling2D())
+        layers.append(BatchNormalization())
+        layers.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
+                             padding="same", activation="relu", kernel_initializer=Orthogonal()))
+        layers.append(MaxPooling2D())
 
-        self.layers.append(BatchNormalization())
-        self.layers.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
-                                  padding="same", activation="relu", kernel_initializer=Orthogonal()))
-        self.layers.append(MaxPooling2D())
+        layers.append(BatchNormalization())
+        layers.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
+                             padding="same", activation="relu", kernel_initializer=Orthogonal()))
+        layers.append(MaxPooling2D())
 
-        self.layers.append(BatchNormalization())
-        self.layers.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
-                                  padding="same", activation="relu", kernel_initializer=Orthogonal()))
-        self.layers.append(GlobalAveragePooling2D())
+        layers.append(BatchNormalization())
+        layers.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
+                             padding="same", activation="relu", kernel_initializer=Orthogonal()))
+        layers.append(GlobalAveragePooling2D())
 
-        self.layers.append(BatchNormalization())
-        self.layers.append(Dense(units=num_outputs, activation="softmax", kernel_initializer=Orthogonal()))
+        layers.append(BatchNormalization())
+        layers.append(Dense(units=num_outputs, activation="softmax", kernel_initializer=Orthogonal()))
+        self.layers = list(layers)
+
+    @property
+    def trainable_variables(self):
+        variables = []
+        for layer in self.layers:
+            x = layer.trainable_variables
+            variables.extend(x)
+        return variables
 
     def call(self, features, **ignored):
         net = features

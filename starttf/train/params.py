@@ -27,7 +27,7 @@ def check_completness(params):
     assert __has_attribute(params.arch, "prepare")
 
     assert __has_attribute(params, "problem")
-    #assert __has_attribute(self.problem, "base_dir")
+    #assert __has_attribute(params.problem, "tf_records_path")
 
 
 class HyperParams(OriginalParams):
@@ -54,5 +54,6 @@ class HyperParams(OriginalParams):
 
         self.problem = OriginalParams()
         self.problem.base_dir = None
+        self.problem.tf_records_path = None
 
         super().__init__(d=d)

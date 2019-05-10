@@ -30,10 +30,8 @@ from hyperparams.hyperparams import import_params, load_params
 import starttf
 from starttf.train.params import check_completness
 from starttf.utils.create_optimizer import create_keras_optimizer
-
-
-PHASE_TRAIN = "train"
-PHASE_VALIDATION = "validation"
+from starttf import PHASE_TRAIN, PHASE_VALIDATION
+from starttf.data.prepare import easy_tfrecord_prepare, create_input_fn
 
 
 def __dict_to_str(data):
@@ -50,43 +48,58 @@ def __dict_to_str(data):
     return " - ".join(out)
 
 
+def format_time(t):
+    hours, remainder = divmod(t, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return '%d:%02d:%02d' % (hours, minutes, seconds)
+
+
 # @tf.function
-def __train(model, dataset, optimizer, loss, metrics, step):
+def __train(model, dataset, samples_per_epoch, optimizer, loss, metrics, samples_seen):
     i = 0
-    N = len(dataset)
+    samples = 0
+    N = int(samples_per_epoch / starttf.hyperparams.train.batch_size - 0.00001) + 1
     tf.keras.backend.set_learning_phase(1)
     for x, y in dataset:
         with tf.GradientTape() as tape:
             prediction = model(**x)
             loss_results = loss(y, prediction)
             metrics(y, prediction)
-        gradients = tape.gradient(loss_results, model.trainable_variables)
-        optimizer.apply_gradients(gradients, model.trainable_variables)
-        print("\rBatch {}/{} - {} - {}".format(i + 1, N, __dict_to_str(loss.values), __dict_to_str(metrics.values)), end="")
+        variables = model.trainable_variables
+        gradients = tape.gradient(loss_results, variables)
+        optimizer.apply_gradients(zip(gradients, variables))
+        samples += starttf.hyperparams.train.batch_size
+        print("\rBatch {}/{} - Loss {:.3f}".format(i + 1, N, loss_results), end="")
         if i % starttf.hyperparams.train.log_steps == 0:
+            tf.summary.scalar('hyperparams/lr', optimizer.lr, step=samples_seen + samples)
             for k in loss.values:
                 tf.summary.scalar("loss/{}".format(k), loss.values[k],
-                                  step=step + i * starttf.hyperparams.train.batch_size)
+                                  step=samples_seen + samples)
             for k in metrics.values:
                 tf.summary.scalar("metrics/{}".format(k),
-                                  metrics.values[k], step=step + i * starttf.hyperparams.train.batch_size)
+                                  metrics.values[k], step=samples_seen + samples)
         i += 1
     tf.keras.backend.set_learning_phase(0)
+    return samples_seen + samples
 
 
 # @tf.function
-def __validate(model, dataset, loss, metrics, step):
+def __validate(model, dataset, samples_per_epoch, loss, metrics, samples_seen):
     tf.keras.backend.set_learning_phase(0)
+    samples = 0
     for x, y in dataset:
         prediction = model(**x)
         loss(y, prediction)
         metrics(y, prediction)
+        samples += starttf.hyperparams.train.batch_size
+        if samples >= samples_per_epoch:
+            break
     for k in loss.avg:
         tf.summary.scalar("loss/{}".format(k), loss.avg[k],
-                          step=step)
+                          step=samples_seen)
     for k in metrics.avg:
         tf.summary.scalar("metrics/{}".format(k),
-                          metrics.avg[k], step=step)
+                          metrics.avg[k], step=samples_seen)
     return loss.avg, metrics.avg
 
 
@@ -95,7 +108,6 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, metrics=None,
                             optimizer=None, epochs=None,
                             continue_training=False, continue_with_specific_checkpointpath=None,
                             train_fn=__train, validation_fn=__validate, create_optimizer=create_keras_optimizer):
-    hyperparams.immutable = True
     check_completness(hyperparams)
     starttf.hyperparams = hyperparams
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
@@ -135,17 +147,41 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, metrics=None,
         n = hyperparams.arch.metrics.split(".")[-1]
         arch_loss = __import__(p, fromlist=[n])
         metrics = arch_loss.__dict__[n]()
-    if training_data is None and hyperparams.arch.get("prepare", None) is not None:
-        p = ".".join(hyperparams.arch.prepare.split(".")[:-1])
-        n = hyperparams.arch.prepare.split(".")[-1]
-        prepare = __import__(p, fromlist=[n])
-        prepare = prepare.__dict__[n]
-        training_data = prepare(hyperparams, PHASE_TRAIN)
-        validation_data = prepare(hyperparams, PHASE_VALIDATION)
     if optimizer is None and hyperparams.train.get("optimizer", None) is not None:
         optimizer, lr_scheduler = create_optimizer(hyperparams)
     if epochs is None:
         epochs = hyperparams.train.get("epochs", 1)
+
+    if training_data is None and validation_data is None:
+        augment_train = None
+        augment_test = None
+        if "augment" in hyperparams.arch.__dict__:
+            p = ".".join(hyperparams.arch.augment.split(".")[:-1])
+            n = hyperparams.arch.augment.split(".")[-1]
+            arch_augment = __import__(p, fromlist=[n])
+            augment = arch_augment.__dict__[n]()
+            augment_train = augment.train
+            augment_test = augment.test
+        if hyperparams.problem.tf_records_path is not None:  # Use tfrecords buffer
+            tmp = hyperparams.train.batch_size
+            hyperparams.train.batch_size = 1
+            easy_tfrecord_prepare(hyperparams)
+            hyperparams.train.batch_size = tmp
+            training_data, training_samples = create_input_fn(
+                hyperparams, PHASE_TRAIN, augmentation_fn=augment_train, repeat=False)
+            training_data = training_data()
+            validation_data, validation_samples = create_input_fn(
+                hyperparams, PHASE_VALIDATION, augmentation_fn=augment_test, repeat=False)
+            validation_data = validation_data()
+        else:  # Load sequence directly
+            p = ".".join(hyperparams.arch.prepare.split(".")[:-1])
+            n = hyperparams.arch.prepare.split(".")[-1]
+            prepare = __import__(p, fromlist=[n])
+            prepare = prepare.__dict__[n]
+            training_data = prepare(hyperparams, PHASE_TRAIN, augmentation_fn=augment_train)
+            training_samples = len(training_data) * hyperparams.train.batch_size
+            validation_data = prepare(hyperparams, PHASE_VALIDATION, augmentation_fn=augment_train)
+            validation_samples = len(validation_data) * hyperparams.train.batch_size
 
     # Check if all requirements could be retrieved.
     if model is None or loss is None or metrics is None or training_data is None or validation_data is None or optimizer is None or epochs is None:
@@ -156,22 +192,30 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, metrics=None,
     manager = tf.train.CheckpointManager(ckpt, chkpt_path, max_to_keep=10)
     ckpt.restore(manager.latest_checkpoint)
 
+    with open(os.path.join(chkpt_path, "hyperparams.json"), "w") as f:
+        f.write(str(hyperparams))
+    hyperparams.immutable = True
+
     print("Epoch {}/{}".format(1, epochs))
+    samples_seen = 0
+    start = time.time()
     for i in range(epochs):
-        step = i * len(training_data) * starttf.hyperparams.train.batch_size
         loss.reset()
         metrics.reset()
         with train_summary_writer.as_default():
-            train_fn(model, training_data, optimizer, loss, metrics, step)
-        step = (i + 1) * len(training_data) * starttf.hyperparams.train.batch_size
+            samples_seen = train_fn(model, training_data, training_samples, optimizer, loss, metrics, samples_seen)
         loss.reset()
         metrics.reset()
         with val_summary_writer.as_default():
-            loss_results, metrics_results = validation_fn(model, validation_data, loss, metrics, step)
+            loss_results, metrics_results = validation_fn(
+                model, validation_data, validation_samples, loss, metrics, samples_seen)
 
         ckpt.step.assign_add(1)
         save_path = manager.save()
-        print("\nEpoch {}/{} - {} - {}".format(i + 1, epochs, __dict_to_str(loss_results), __dict_to_str(metrics_results)))
+        elapsed_time = time.time() - start
+        eta = elapsed_time / (i + 1) * (epochs - (i + 1))
+        print("\rEpoch {}/{} - ETA {} - {} - {}".format(i + 1, epochs, format_time(eta),
+                                                        __dict_to_str(loss_results), __dict_to_str(metrics_results)))
 
     return chkpt_path
 
@@ -179,20 +223,16 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, metrics=None,
 def main(args):
     if len(args) == 2 or len(args) == 3:
         continue_training = False
-        no_artifacts = False
         idx = 1
         if args[idx] == "--continue":
             continue_training = True
-            idx += 1
-        if args[idx] == "--no_artifacts":
-            no_artifacts = True
             idx += 1
         if args[1].endswith(".json"):
             hyperparams = load_params(args[idx])
         elif args[1].endswith(".py"):
             hyperparams = import_params(args[idx])
         setproctitle("train {}".format(hyperparams.train.experiment_name))
-        return easy_train_and_evaluate(hyperparams, continue_training=continue_training, no_artifacts=no_artifacts)
+        return easy_train_and_evaluate(hyperparams, continue_training=continue_training)
     else:
         print("Usage: python -m starttf.train.supervised [--continue] hyperparameters/myparams.py")
         return None

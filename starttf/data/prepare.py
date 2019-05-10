@@ -21,49 +21,56 @@
 # SOFTWARE.
 
 import os
+from os import listdir
+from os.path import isfile, join
+import sys
+import json
 from shutil import copyfile
 import filecmp
 import numpy as np
 from multiprocessing import Pool
 import tensorflow as tf
-from os import listdir
-from os.path import isfile, join
-import json
-Sequence = tf.keras.utils.Sequence
-
-PHASE_TRAIN = "train"
-PHASE_VALIDATION = "validation"
+from setproctitle import setproctitle
+from tensorflow.keras.utils import Sequence
+from starttf import PHASE_TRAIN, PHASE_VALIDATION
+from hyperparams import load_params
+from hyperparams.hyperparams import import_params
 
 
 def easy_tfrecord_prepare(hyperparams):
+    p = ".".join(hyperparams.arch.prepare.split(".")[:-1])
+    n = hyperparams.arch.prepare.split(".")[-1]
+    prepare = __import__(p, fromlist=[n])
+    prepare = prepare.__dict__[n]
+
     # Generate filenames
-    prepare_file = hyperparams["problem"]["prepare"].replace(".", os.sep)
-    prepare_file_backup = join(hyperparams["train"]["tf_records_path"], "prepare.py")
-    hyperparams_backup = join(hyperparams["train"]["tf_records_path"], "hyperparameters.json")
+    prepare_file = p.replace(".", os.sep) + ".py"
+    prepare_file_backup = join(hyperparams.problem.tf_records_path, "prepare.py")
+    hyperparams_backup = join(hyperparams.problem.tf_records_path, "hyperparameters.json")
 
     # Create output dir if it does not exist
-    if not os.path.exists(hyperparams["train"]["tf_records_path"]):
-        os.makedirs(hyperparams["train"]["tf_records_path"])
+    if not os.path.exists(hyperparams.problem.tf_records_path):
+        os.makedirs(hyperparams.problem.tf_records_path)
     else:
         # Check if data is already up to date
-        if filecmp.cmp(prepare_file, prepare_file_backup) and load_params(hyperparams_backup)["problem"] == hyperparams["problem"]:
+        if os.path.exists(hyperparams_backup) and os.path.exists(prepare_file_backup) and filecmp.cmp(prepare_file, prepare_file_backup) and load_params(hyperparams_backup).problem == hyperparams.problem:
+            print("Data already up to date.")
             return
+
+    # Get a generator and its parameters
+    training_data = prepare(hyperparams, PHASE_TRAIN)
+    validation_data = prepare(hyperparams, PHASE_VALIDATION)
 
     # Copy preparation code to output location and load the module.
     copyfile(prepare_file, prepare_file_backup)
-    prepare = __import__(hyperparams["problem"]["prepare"], fromlist=["Sequence"])
-
-    # Get a generator and its parameters
-    training_data = prepare.Sequence(hyperparams, PHASE_TRAIN)
-    validation_data = prepare.Sequence(hyperparams, PHASE_VALIDATION)
 
     # Save the hyperparameters to the output location
     with open(hyperparams_backup, "w") as json_file:
         json_file.write(json.dumps(hyperparams.to_dict(), indent=4, sort_keys=True))
 
     # Write the data
-    write_data(hyperparams, PHASE_TRAIN, training_data, 4)
-    write_data(hyperparams, PHASE_VALIDATION, validation_data, 2)
+    write_data(hyperparams, PHASE_TRAIN, training_data, 8)
+    write_data(hyperparams, PHASE_VALIDATION, validation_data, 8)
 
 
 def _bytes_feature(value):
@@ -77,30 +84,27 @@ def _write_tf_record_pool_helper(args):
 
 
 def _write_tf_record(hyper_params, sequence, num_threads, i, record_filename, thread_name="thread"):
-    writer = tf.python_io.TFRecordWriter(record_filename)
+    writer = tf.io.TFRecordWriter(record_filename)
 
     samples_written = 0
-    augmentation_steps = hyper_params["problem"]["augmentation"].get("steps", 1)
+    for idx in range(i, len(sequence), num_threads):
+        feature_batch, label_batch = sequence[idx]
+        batch_size = list(feature_batch.values())[0].shape[0]
+        for batch_idx in range(batch_size):
+            feature_dict = {}
 
-    for i in range(augmentation_steps):
-        for idx in range(i, len(sequence), num_threads):
-            feature_batch, label_batch = sequence[idx]
-            batch_size = list(feature_batch.values())[0].shape[0]
-            for batch_idx in range(batch_size):
-                feature_dict = {}
+            for k in feature_batch.keys():
+                feature_dict['feature_' +
+                             k] = _bytes_feature(np.reshape(feature_batch[k][batch_idx], (-1,)).tobytes())
+            for k in label_batch.keys():
+                feature_dict['label_' + k] = _bytes_feature(np.reshape(label_batch[k][batch_idx], (-1,)).tobytes())
 
-                for k in feature_batch.keys():
-                    feature_dict['feature_' +
-                                 k] = _bytes_feature(np.reshape(feature_batch[k][batch_idx], (-1,)).tobytes())
-                for k in label_batch.keys():
-                    feature_dict['label_' + k] = _bytes_feature(np.reshape(label_batch[k][batch_idx], (-1,)).tobytes())
-
-                example = tf.train.Example(features=tf.train.Features(
-                    feature=feature_dict))
-                writer.write(example.SerializeToString())
-                samples_written += 1
-                if samples_written % 1000 == 0:
-                    print("Samples written by %s: %d." % (thread_name, samples_written))
+            example = tf.train.Example(features=tf.train.Features(
+                feature=feature_dict))
+            writer.write(example.SerializeToString())
+            samples_written += 1
+            if samples_written % 1000 == 0:
+                print("Samples written by %s: %d." % (thread_name, samples_written))
     print("Samples written by %s: %d." % (thread_name, samples_written))
     writer.close()
 
@@ -137,9 +141,9 @@ def _create_parser_fn(config, phase):
         tensor_dict = {}
         for k in config.keys():
             if "feature_" in k or "label_" in k:
-                tensor_dict[k] = tf.FixedLenFeature([], tf.string)
+                tensor_dict[k] = tf.io.FixedLenFeature([], tf.string)
 
-        data = tf.parse_single_example(
+        data = tf.io.parse_single_example(
             serialized_example,
             features=tensor_dict)
 
@@ -147,7 +151,7 @@ def _create_parser_fn(config, phase):
         for k in tensor_dict.keys():
             tensor_shape = config[k]["shape"]
             tensor_type = np.dtype(config[k]["dtype"])
-            tensor = tf.decode_raw(data[k], tensor_type)
+            tensor = tf.io.decode_raw(data[k], tensor_type)
             tensor_len = 1
             for x in list(tensor_shape):
                 tensor_len *= x
@@ -168,49 +172,7 @@ def _create_parser_fn(config, phase):
     return parser_fn
 
 
-def _read_data_legacy(prefix, batch_size):
-    """
-    Loads a tf record as tensors you can use.
-    :param prefix: The path prefix as defined in the write data method.
-    :param batch_size: The batch size you want for the tensors.
-    :return: A feature tensor dict and a label tensor dict.
-    """
-    prefix = prefix.replace("\\", "/")
-    folder = "/".join(prefix.split("/")[:-1])
-    phase = prefix.split("/")[-1]
-    config = json.load(open(prefix + '_config.json'))
-    num_threads = config["num_threads"]
-
-    filenames = [folder + "/" + f for f in listdir(folder) if isfile(join(folder, f))
-                 and phase in f and not "config.json" in f]
-
-    # Create a tf object for the filename list and the readers.
-    filename_queue = tf.train.string_input_producer(filenames)
-    readers = [_read_tf_record(filename_queue, config) for _ in range(num_threads)]
-
-    batch_dict = tf.train.shuffle_batch_join(
-        readers,
-        batch_size=batch_size,
-        capacity=10 * batch_size,
-        min_after_dequeue=5 * batch_size
-    )
-
-    # Add batch dimension to feature and label shape
-
-    feature_batch = {}
-    label_batch = {}
-    for k in batch_dict.keys():
-        shape = tuple([batch_size] + list(config[k]["shape"]))
-        tensor = tf.reshape(batch_dict[k], shape, name="input/" + phase + "/" + k + "_reshape")
-        if "feature_" in k:
-            feature_batch["_".join(k.split("_")[1:])] = tensor
-        if "label_" in k:
-            label_batch["_".join(k.split("_")[1:])] = tensor
-
-    return feature_batch, label_batch
-
-
-def _read_data(prefix, batch_size, augmentation=None):
+def _read_data(prefix, batch_size, augmentation=None, repeat=True):
     """
     Loads a dataset.
 
@@ -230,7 +192,8 @@ def _read_data(prefix, batch_size, augmentation=None):
 
     dataset = tf.data.TFRecordDataset(filenames=filenames, num_parallel_reads=num_threads)
     dataset = dataset.shuffle(buffer_size=10 * batch_size)
-    dataset = dataset.repeat()
+    if repeat:
+        dataset = dataset.repeat()
     dataset = dataset.map(map_func=_create_parser_fn(config, phase), num_parallel_calls=num_threads)
     if augmentation is not None:
         dataset = dataset.map(map_func=augmentation, num_parallel_calls=num_threads)
@@ -240,7 +203,7 @@ def _read_data(prefix, batch_size, augmentation=None):
     return dataset
 
 
-def create_input_fn(prefix, batch_size, augmentation=None):
+def create_input_fn(hyperparams, mode, augmentation_fn=None, repeat=True):
     """
     Loads a dataset.
 
@@ -249,19 +212,17 @@ def create_input_fn(prefix, batch_size, augmentation=None):
     :param augmentation: An augmentation function.
     :return: An input function for a tf estimator.
     """
-    # Check if the version is too old for dataset api to work better than manually loading data.
-    if tf.__version__.startswith("1.6") or tf.__version__.startswith("1.5") or tf.__version__.startswith("1.4") \
-            or tf.__version__.startswith("1.3") or tf.__version__.startswith("1.2") \
-            or tf.__version__.startswith("1.1") or tf.__version__.startswith("1.0"):
-        def input_fn():
-            with tf.variable_scope("input_pipeline"):
-                return _read_data_legacy(prefix, batch_size)
-        return input_fn
-    else:
-        def input_fn():
-            with tf.variable_scope("input_pipeline"):
-                return _read_data(prefix, batch_size, augmentation)
-        return input_fn
+    assert mode == PHASE_TRAIN or mode == PHASE_VALIDATION, "mode must be either starttf.PHASE_TRAIN or starttf.PHASE_VALIDATION"
+    prefix = os.path.join(hyperparams.problem.tf_records_path, mode)
+
+    prefix = prefix.replace("\\", "/")
+    folder = "/".join(prefix.split("/")[:-1])
+    phase = prefix.split("/")[-1]
+    config = json.load(open(prefix + '_config.json'))
+
+    def input_fn():
+        return _read_data(prefix, hyperparams.train.batch_size, augmentation_fn, repeat=repeat)
+    return input_fn, config["num_samples"]
 
 
 def write_data(hyper_params,
@@ -280,7 +241,7 @@ def write_data(hyper_params,
     if not isinstance(sequence, Sequence) and not (callable(getattr(sequence, "__getitem__", None)) and callable(getattr(sequence, "__len__", None))):
         raise ValueError(
             "sequence must be tf.keras.utils.Sequence or a subtype or implement __len__(self) and __getitem__(self, idx)")
-    prefix = os.path.join(hyper_params.train.get("tf_records_path", "tfrecords"), mode)
+    prefix = os.path.join(hyper_params.problem.tf_records_path, mode)
     prefix = prefix.replace("\\", "/")
     data_tmp_folder = "/".join(prefix.split("/")[:-1])
     if not os.path.exists(data_tmp_folder):
@@ -291,7 +252,7 @@ def write_data(hyper_params,
     # Retrieve a single batch
     sample_feature, sample_label = sequence[0]
 
-    config = {"num_threads": num_threads}
+    config = {"num_threads": num_threads, "num_samples": len(sequence)}
     for k in sample_feature.keys():
         config["feature_" + k] = {"shape": sample_feature[k].shape[1:], "dtype": sample_feature[k].dtype.name}
     for k in sample_label.keys():
@@ -302,3 +263,22 @@ def write_data(hyper_params,
 
     pool = Pool(processes=num_threads)
     pool.map(_write_tf_record_pool_helper, args)
+
+
+def main(args):
+    if len(args) == 2 or len(args) == 3:
+        idx = 1
+        if args[1].endswith(".json"):
+            hyperparams = load_params(args[idx])
+        elif args[1].endswith(".py"):
+            hyperparams = import_params(args[idx])
+        name = hyperparams.train.get("experiment_name", "unnamed")
+        setproctitle("prepare {}".format(name))
+        return easy_tfrecord_prepare(hyperparams)
+    else:
+        print("Usage: python -m starttf.data hyperparameters/myparams.py")
+        return None
+
+
+if __name__ == "__main__":
+    main(sys.argv)

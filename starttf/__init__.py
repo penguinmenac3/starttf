@@ -21,6 +21,9 @@
 # SOFTWARE.
 
 
+PHASE_TRAIN = "train"
+PHASE_VALIDATION = "validation"
+
 NO_PARAMS = object()
 hyperparams = None
 
