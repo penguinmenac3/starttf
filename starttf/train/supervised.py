@@ -55,9 +55,8 @@ def format_time(t):
 
 
 # @tf.function
-def __train(model, dataset, samples_per_epoch, optimizer, loss, metrics, samples_seen):
+def __train(model, dataset, samples_per_epoch, optimizer, loss, metrics):
     i = 0
-    samples = 0
     N = int(samples_per_epoch / starttf.hyperparams.train.batch_size - 0.00001) + 1
     tf.keras.backend.set_learning_phase(1)
     for x, y in dataset:
@@ -68,23 +67,22 @@ def __train(model, dataset, samples_per_epoch, optimizer, loss, metrics, samples
         variables = model.trainable_variables
         gradients = tape.gradient(loss_results, variables)
         optimizer.apply_gradients(zip(gradients, variables))
-        samples += starttf.hyperparams.train.batch_size
+        starttf.train.samples_seen = starttf.train.samples_seen + starttf.hyperparams.train.batch_size
         print("\rBatch {}/{} - Loss {:.3f}".format(i + 1, N, loss_results), end="")
         if i % starttf.hyperparams.train.log_steps == 0:
-            tf.summary.scalar('hyperparams/lr', optimizer.lr, step=samples_seen + samples)
+            tf.summary.scalar('hyperparams/lr', optimizer.lr, step=starttf.train.samples_seen)
             for k in loss.values:
                 tf.summary.scalar("loss/{}".format(k), loss.values[k],
-                                  step=samples_seen + samples)
+                                  step=starttf.train.samples_seen)
             for k in metrics.values:
                 tf.summary.scalar("metrics/{}".format(k),
-                                  metrics.values[k], step=samples_seen + samples)
+                                  metrics.values[k], step=starttf.train.samples_seen)
         i += 1
     tf.keras.backend.set_learning_phase(0)
-    return samples_seen + samples
 
 
 # @tf.function
-def __validate(model, dataset, samples_per_epoch, loss, metrics, samples_seen):
+def __validate(model, dataset, samples_per_epoch, loss, metrics):
     tf.keras.backend.set_learning_phase(0)
     samples = 0
     for x, y in dataset:
@@ -96,10 +94,10 @@ def __validate(model, dataset, samples_per_epoch, loss, metrics, samples_seen):
             break
     for k in loss.avg:
         tf.summary.scalar("loss/{}".format(k), loss.avg[k],
-                          step=samples_seen)
+                          step=starttf.train.samples_seen)
     for k in metrics.avg:
         tf.summary.scalar("metrics/{}".format(k),
-                          metrics.avg[k], step=samples_seen)
+                          metrics.avg[k], step=starttf.train.samples_seen)
     return loss.avg, metrics.avg
 
 
@@ -202,20 +200,21 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, metrics=None,
     lr_scheduler.model = DummyModel(optimizer)
 
     print("Epoch {}/{}".format(1, epochs))
-    samples_seen = 0
+    starttf.train.samples_seen = 0
     start = time.time()
     for i in range(epochs):
         lr_scheduler.on_epoch_begin(i)
         loss.reset()
         metrics.reset()
         with train_summary_writer.as_default():
-            samples_seen = train_fn(model, training_data, training_samples, optimizer, loss, metrics, samples_seen)
+            train_fn(
+                model, training_data, training_samples, optimizer, loss, metrics)
         lr_scheduler.on_epoch_end(i)
         loss.reset()
         metrics.reset()
         with val_summary_writer.as_default():
             loss_results, metrics_results = validation_fn(
-                model, validation_data, validation_samples, loss, metrics, samples_seen)
+                model, validation_data, validation_samples, loss, metrics)
 
         ckpt.step.assign_add(1)
         save_path = manager.save()
