@@ -16,7 +16,7 @@ class FashionMnistParams(HyperParams):
         super().__init__()
         self.problem.number_of_categories = 10
         self.problem.base_dir = "datasets"
-        #self.problem.tf_records_path = "tfrecords"
+        self.problem.tf_records_path = "tfrecords"
 
         self.train.epochs = 20
         self.train.l2_weight = 0.01
@@ -24,8 +24,8 @@ class FashionMnistParams(HyperParams):
         self.train.log_steps = 100
         self.train.experiment_name = "%NAME%"
         self.train.checkpoint_path = "checkpoints"
-        self.train.learning_rate.type = "const"
-        self.train.learning_rate.start_value = 0.0001
+        self.train.learning_rate.type = "exponential"
+        self.train.learning_rate.start_value = 0.001
         self.train.learning_rate.end_value = 0.0001
 
         self.arch.model = "examples.fashion_mnist.FashionMnistModel"

@@ -196,14 +196,21 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, metrics=None,
         f.write(str(hyperparams))
     hyperparams.immutable = True
 
+    class DummyModel():
+        def __init__(self, optimizer):
+            self.optimizer = optimizer
+    lr_scheduler.model = DummyModel(optimizer)
+
     print("Epoch {}/{}".format(1, epochs))
     samples_seen = 0
     start = time.time()
     for i in range(epochs):
+        lr_scheduler.on_epoch_begin(i)
         loss.reset()
         metrics.reset()
         with train_summary_writer.as_default():
             samples_seen = train_fn(model, training_data, training_samples, optimizer, loss, metrics, samples_seen)
+        lr_scheduler.on_epoch_end(i)
         loss.reset()
         metrics.reset()
         with val_summary_writer.as_default():
