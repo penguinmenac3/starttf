@@ -124,6 +124,8 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, metrics=None,
         os.makedirs(chkpt_path + "/train")
     if not os.path.exists(chkpt_path + "/val"):
         os.makedirs(chkpt_path + "/val")
+    if not os.path.exists(chkpt_path + "/checkpoints"):
+        os.makedirs(chkpt_path + "/checkpoints")
 
     # Summary writers
     train_summary_writer = tf.summary.create_file_writer(chkpt_path + "/train")
@@ -187,7 +189,7 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, metrics=None,
 
     # Load Checkpoint
     ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
-    manager = tf.train.CheckpointManager(ckpt, chkpt_path, max_to_keep=10)
+    manager = tf.train.CheckpointManager(ckpt, os.path.join(chkpt_path, "checkpoints"), max_to_keep=10)
     ckpt.restore(manager.latest_checkpoint)
 
     with open(os.path.join(chkpt_path, "hyperparams.json"), "w") as f:
