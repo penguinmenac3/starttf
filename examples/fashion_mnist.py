@@ -65,43 +65,34 @@ class FashionMnistModel(Module):
         super().__init__(name)
         l2_weight = self.hyperparams.train.l2_weight
         num_outputs = self.hyperparams.problem.number_of_categories
-        layers = []
-        layers.append(Lambda(lambda x: tf.keras.backend.expand_dims(x)))
-        layers.append(BatchNormalization())
-        layers.append(Conv2D(filters=12, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
-                             padding="same", activation="relu", kernel_initializer=Orthogonal()))
-        layers.append(MaxPooling2D())
+        self.linear = []
+        self.linear.append(Lambda(lambda x: tf.keras.backend.expand_dims(x)))
+        self.linear.append(BatchNormalization())
+        self.linear.append(Conv2D(filters=12, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
+                                  padding="same", activation="relu", kernel_initializer=Orthogonal()))
+        self.linear.append(MaxPooling2D())
 
-        layers.append(BatchNormalization())
-        layers.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
-                             padding="same", activation="relu", kernel_initializer=Orthogonal()))
-        layers.append(MaxPooling2D())
+        self.linear.append(BatchNormalization())
+        self.linear.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
+                                  padding="same", activation="relu", kernel_initializer=Orthogonal()))
+        self.linear.append(MaxPooling2D())
 
-        layers.append(BatchNormalization())
-        layers.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
-                             padding="same", activation="relu", kernel_initializer=Orthogonal()))
-        layers.append(MaxPooling2D())
+        self.linear.append(BatchNormalization())
+        self.linear.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
+                                  padding="same", activation="relu", kernel_initializer=Orthogonal()))
+        self.linear.append(MaxPooling2D())
 
-        layers.append(BatchNormalization())
-        layers.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
-                             padding="same", activation="relu", kernel_initializer=Orthogonal()))
-        layers.append(GlobalAveragePooling2D())
+        self.linear.append(BatchNormalization())
+        self.linear.append(Conv2D(filters=18, kernel_regularizer=l2(l2_weight), kernel_size=(3, 3),
+                                  padding="same", activation="relu", kernel_initializer=Orthogonal()))
+        self.linear.append(GlobalAveragePooling2D())
 
-        layers.append(BatchNormalization())
-        layers.append(Dense(units=num_outputs, activation="softmax", kernel_initializer=Orthogonal()))
-        self.layers = list(layers)
+        self.linear.append(BatchNormalization())
+        self.linear.append(Dense(units=num_outputs, activation="softmax", kernel_initializer=Orthogonal()))
 
-    @property
-    def trainable_variables(self):
-        variables = []
-        for layer in self.layers:
-            x = layer.trainable_variables
-            variables.extend(x)
-        return variables
-
-    def call(self, features, **ignored):
+    def forward(self, features, training=False):
         net = features
-        for l in self.layers:
+        for l in self.linear:
             net = l(net)
         return {"class_id": net}
 

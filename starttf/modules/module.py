@@ -25,7 +25,7 @@ from tensorflow.keras.layers import Lambda
 import starttf
 
 
-class Module(tf.Module):
+class Module(tf.keras.Model):
     def __init__(self, name, **kwargs):
         if starttf.modules.log_calls:
             print("{}.__init__".format(name))
@@ -34,27 +34,19 @@ class Module(tf.Module):
             raise RuntimeWarning(
                 "You did not set starttf.modules.hyperparams. You may want to consider setting it to starttf.modules.NO_PARAMS if this was intentional.")
         self.hyperparams = starttf.hyperparams
-        self.lambda_mode = False
         self.__dict__.update(kwargs)
-        if self.lambda_mode:
-            self.__lambda = Lambda(self.call)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, **kwargs):
         if starttf.modules.log_calls or starttf.modules.log_inputs:
             print("{}.__call__".format(self.name))
         if starttf.modules.log_inputs:
-            for a in args:
-                print(" {}".format(a))
             for k in kwargs:
                 print(" {}: {}".format(k, kwargs[k]))
             print()
-        if self.lambda_mode:
-            return self.__lambda(*args, **kwargs)
-        return self.call(*args, **kwargs)
+        return super().__call__(kwargs)
 
-    def call(self, *args, **kwargs):
-        """
-        Run the model.
-        """
-        raise NotImplementedError("The model must implement a call function which predicts " +
-                                  "the outputs (dict of tensors) given the input (dict of tensors).")
+    def call(self, kwargs, training=False):
+        return self.forward(training=training, **kwargs)
+
+    def forward(self, training=False, **kwargs):
+        raise RuntimeError("This function must be overwritten by a subclass!")

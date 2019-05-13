@@ -22,10 +22,9 @@
 
 import tensorflow as tf
 import starttf
-from starttf.modules import Module
 
 
-class Loss(Module):
+class Loss(tf.Module):
     def __init__(self, name="Loss"):
         super().__init__(name=name)
         self.losses = {}
@@ -35,7 +34,7 @@ class Loss(Module):
     def reset(self):
         pass
 
-    def call(self, y_true, y_pred):
+    def __call__(self, y_true, y_pred):
         if self.losses is None:
             raise RuntimeError("You must specify self.losses before calling this module.")
 
