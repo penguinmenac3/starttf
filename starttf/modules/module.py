@@ -25,7 +25,7 @@ from tensorflow.keras.layers import Lambda
 import starttf
 
 
-class Module(tf.keras.Model):
+class Model(tf.keras.Model):
     def __init__(self, name, **kwargs):
         if starttf.modules.log_calls:
             print("{}.__init__".format(name))
@@ -36,14 +36,61 @@ class Module(tf.keras.Model):
         self.hyperparams = starttf.hyperparams
         self.__dict__.update(kwargs)
 
-    def __call__(self, **kwargs):
+    def __call__(self, *args, **kwargs):
         if starttf.modules.log_calls or starttf.modules.log_inputs:
             print("{}.__call__".format(self.name))
         if starttf.modules.log_inputs:
+            for i, val in enumerate(args):
+                print(" {}: {}".format(i, val))
             for k in kwargs:
                 print(" {}: {}".format(k, kwargs[k]))
             print()
-        return super().__call__(kwargs)
+        if len(args) > 0:
+            return super().__call__(*args, **kwargs)
+        else:
+            if "training" in kwargs:
+                training = kwargs["training"]
+                del kwargs["training"]
+                return super().__call__(kwargs, training=training)
+            else:
+                return super().__call__(kwargs)
+
+    def call(self, kwargs, training=False):
+        return self.forward(training=training, **kwargs)
+
+    def forward(self, training=False, **kwargs):
+        raise RuntimeError("This function must be overwritten by a subclass!")
+
+
+class Layer(tf.keras.layers.Layer):
+    def __init__(self, name, **kwargs):
+        if starttf.modules.log_calls:
+            print("{}.__init__".format(name))
+        super().__init__(name=name)
+        if starttf.hyperparams is None and starttf.hyperparams is not starttf.NO_PARAMS:
+            raise RuntimeWarning(
+                "You did not set starttf.modules.hyperparams. You may want to consider setting it to starttf.modules.NO_PARAMS if this was intentional.")
+        self.hyperparams = starttf.hyperparams
+        self.__dict__.update(kwargs)
+
+    def __call__(self, *args, **kwargs):
+        if starttf.modules.log_calls or starttf.modules.log_inputs:
+            print("{}.__call__".format(self.name))
+        if starttf.modules.log_inputs:
+            for i, val in enumerate(args):
+                print(" {}: {}".format(i, val))
+            for k in kwargs:
+                print(" {}: {}".format(k, kwargs[k]))
+            print()
+        if len(args) > 0:
+            return super().__call__(*args, **kwargs)
+        else:
+            if "training" in kwargs:
+                training = kwargs["training"]
+                del kwargs["training"]
+                return super().__call__(kwargs, training=training)
+            else:
+                return super().__call__(kwargs)
 
     def call(self, kwargs, training=False):
         return self.forward(training=training, **kwargs)

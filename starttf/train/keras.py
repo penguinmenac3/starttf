@@ -35,9 +35,10 @@ from hyperparams.hyperparams import import_params, load_params
 import starttf
 from starttf import PHASE_TRAIN, PHASE_VALIDATION
 from starttf.train.params import check_completness
-from starttf.data import create_input_fn, easy_tfrecord_prepare
+from starttf.data import create_input_fn, buffer_dataset_as_tfrecords
 from starttf.utils.plot_losses import create_keras_callbacks
 from starttf.utils.create_optimizer import create_keras_optimizer
+from starttf.utils.find_loaded_files import get_loaded_files, get_backup_path, copyfile
 
 
 def rename_fn(fn, name):
@@ -102,20 +103,29 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, metrics=None,
 
     # Try to retrieve optional arguments from hyperparams if not specified
     if model is None:
-        p = ".".join(hyperparams.arch.model.split(".")[:-1])
-        n = hyperparams.arch.model.split(".")[-1]
-        arch_model = __import__(p, fromlist=[n])
-        model = arch_model.__dict__[n]()
+        if isinstance(hyperparams.arch.model, str):
+            p = ".".join(hyperparams.arch.model.split(".")[:-1])
+            n = hyperparams.arch.model.split(".")[-1]
+            arch_model = __import__(p, fromlist=[n])
+            model = arch_model.__dict__[n]()
+        else:
+            model = hyperparams.arch.model()
     if loss is None and hyperparams.arch.get("loss", None) is not None:
-        p = ".".join(hyperparams.arch.loss.split(".")[:-1])
-        n = hyperparams.arch.loss.split(".")[-1]
-        arch_loss = __import__(p, fromlist=[n])
-        loss = arch_loss.__dict__[n]()
+        if isinstance(hyperparams.arch.loss, str):
+            p = ".".join(hyperparams.arch.loss.split(".")[:-1])
+            n = hyperparams.arch.loss.split(".")[-1]
+            arch_loss = __import__(p, fromlist=[n])
+            loss = arch_loss.__dict__[n]()
+        else:
+            loss = hyperparams.arch.loss()
     if metrics is None and hyperparams.arch.get("metrics", None) is not None:
-        p = ".".join(hyperparams.arch.metrics.split(".")[:-1])
-        n = hyperparams.arch.metrics.split(".")[-1]
-        arch_loss = __import__(p, fromlist=[n])
-        metrics = arch_loss.__dict__[n]()
+        if isinstance(hyperparams.arch.metrics, str):
+            p = ".".join(hyperparams.arch.metrics.split(".")[:-1])
+            n = hyperparams.arch.metrics.split(".")[-1]
+            arch_loss = __import__(p, fromlist=[n])
+            metrics = arch_loss.__dict__[n]()
+        else:
+            metrics = hyperparams.arch.metrics()
     if optimizer is None and hyperparams.train.get("optimizer", None) is not None:
         optimizer, lr_scheduler = create_keras_optimizer(hyperparams)
     if epochs is None:
@@ -125,16 +135,19 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, metrics=None,
         augment_train = None
         augment_test = None
         if "augment" in hyperparams.arch.__dict__:
-            p = ".".join(hyperparams.arch.augment.split(".")[:-1])
-            n = hyperparams.arch.augment.split(".")[-1]
-            arch_augment = __import__(p, fromlist=[n])
-            augment = arch_augment.__dict__[n]()
+            if isinstance(hyperparams.arch.augment, str):
+                p = ".".join(hyperparams.arch.augment.split(".")[:-1])
+                n = hyperparams.arch.augment.split(".")[-1]
+                arch_augment = __import__(p, fromlist=[n])
+                augment = arch_augment.__dict__[n]()
+            else:
+                augment = hyperparams.arch.augment()
             augment_train = augment.train
             augment_test = augment.test
         if hyperparams.problem.tf_records_path is not None:  # Use tfrecords buffer
             tmp = hyperparams.train.batch_size
             hyperparams.train.batch_size = 1
-            easy_tfrecord_prepare(hyperparams)
+            buffer_dataset_as_tfrecords(hyperparams)
             hyperparams.train.batch_size = tmp
             training_data, training_samples = create_input_fn(
                 hyperparams, PHASE_TRAIN, augmentation_fn=augment_train, repeat=False)
@@ -143,20 +156,23 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, metrics=None,
                 hyperparams, PHASE_VALIDATION, augmentation_fn=augment_test, repeat=False)
             validation_data = validation_data()
         else:  # Load sequence directly
-            p = ".".join(hyperparams.arch.prepare.split(".")[:-1])
-            n = hyperparams.arch.prepare.split(".")[-1]
-            prepare = __import__(p, fromlist=[n])
-            prepare = prepare.__dict__[n]
+            if isinstance(hyperparams.arch.prepare, str):
+                p = ".".join(hyperparams.arch.prepare.split(".")[:-1])
+                n = hyperparams.arch.prepare.split(".")[-1]
+                prepare = __import__(p, fromlist=[n])
+                prepare = prepare.__dict__[n]
+            else:
+                prepare = hyperparams.arch.prepare
             training_data = prepare(hyperparams, PHASE_TRAIN, augmentation_fn=augment_train)
             training_samples = len(training_data) * hyperparams.train.batch_size
             validation_data = prepare(hyperparams, PHASE_VALIDATION, augmentation_fn=augment_train)
             validation_samples = len(validation_data) * hyperparams.train.batch_size
 
-    # TODO save code
-
-    # Write hyper parameters to be able to track what config you had.
-    with open(chkpt_path + "/hyperparameters.json", "w") as json_file:
-        json_file.write(json.dumps(hyperparams.to_dict(), indent=4, sort_keys=True))
+    # Write loaded code to output dir
+    loaded_files = get_loaded_files()
+    for f in loaded_files:
+        f_backup = get_backup_path(f, outp_dir=os.path.join(chkpt_path, "src"))  # FIXME create backup path from filepath.
+        copyfile(f, f_backup)
 
     if training_data is not None:
         hyperparams.train.steps = hyperparams.train.epochs * training_samples

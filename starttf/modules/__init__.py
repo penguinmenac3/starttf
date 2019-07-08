@@ -20,13 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import tensorflow as tf
-
-from starttf.modules.module import Module
-from starttf.modules.loss import Loss
-from starttf.modules.metric import Metrics
-
-
 log_calls = False
 log_creations = False
 log_inputs = False

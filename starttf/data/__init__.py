@@ -20,6 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from starttf.data.prepare import easy_tfrecord_prepare, create_input_fn
+from starttf.data.prepare import buffer_dataset_as_tfrecords, create_input_fn
 from starttf.data.simple_sequence import Sequence
 from starttf.data.csv_sequence import CSVSequence

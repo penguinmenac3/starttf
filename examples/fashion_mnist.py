@@ -6,35 +6,32 @@ from tensorflow.keras.regularizers import l2
 from tensorflow.keras.losses import categorical_crossentropy, mean_squared_error
 from tensorflow.keras.metrics import categorical_accuracy
 from tensorflow.keras.initializers import Orthogonal
-from starttf.modules import Module, Loss, Metrics
-from starttf.train import HyperParams
-from opendatalake.simple_sequence import SimpleSequence
+import starttf as stf
 
-
-class FashionMnistParams(HyperParams):
+class FashionMnistParams(stf.HyperParams):
     def __init__(self):
         super().__init__()
         self.problem.number_of_categories = 10
         self.problem.base_dir = "datasets"
-        self.problem.tf_records_path = "tfrecords"
+        #self.problem.tf_records_path = "tfrecords"
 
         self.train.epochs = 20
         self.train.l2_weight = 0.01
-        self.train.batch_size = 128
+        self.train.batch_size = 32
         self.train.log_steps = 100
-        self.train.experiment_name = "%NAME%"
+        self.train.experiment_name = "FashionMNIST"
         self.train.checkpoint_path = "checkpoints"
         self.train.learning_rate.type = "exponential"
         self.train.learning_rate.start_value = 0.001
         self.train.learning_rate.end_value = 0.0001
 
-        self.arch.model = "examples.fashion_mnist.FashionMnistModel"
-        self.arch.loss = "examples.fashion_mnist.FashionMnistLoss"
-        self.arch.metrics = "examples.fashion_mnist.FashionMnistMetrics"
-        self.arch.prepare = "examples.fashion_mnist.FashionMnistDataset"
+        self.arch.model = FashionMnistModel
+        self.arch.loss = FashionMnistLoss
+        self.arch.metrics = FashionMnistMetrics
+        self.arch.prepare = FashionMnistDataset
 
 
-class FashionMnistDataset(SimpleSequence):
+class FashionMnistDataset(stf.Sequence):
     def __init__(self, hyperparams, phase, augmentation_fn=None):
         super().__init__(hyperparams, phase, augmentation_fn=augmentation_fn)
         ((trainX, trainY), (valX, valY)) = fashion_mnist.load_data()
@@ -60,7 +57,7 @@ class FashionMnistDataset(SimpleSequence):
             return {"features": np.array(self.valX[idx], dtype="float32")}, {"class_id": label}
 
 
-class FashionMnistModel(Module):
+class FashionMnistModel(stf.Model):
     def __init__(self, name="FashionMnistModel"):
         super().__init__(name)
         l2_weight = self.hyperparams.train.l2_weight
@@ -97,13 +94,13 @@ class FashionMnistModel(Module):
         return {"class_id": net}
 
 
-class FashionMnistLoss(Loss):
+class FashionMnistLoss(stf.Loss):
     def __init__(self):
         super().__init__(name="FashionMnistLoss")
         self.losses = {"class_id": categorical_crossentropy}
 
 
-class FashionMnistMetrics(Metrics):
+class FashionMnistMetrics(stf.Metrics):
     def __init__(self):
         super().__init__(name="FashionMnistLoss")
         self.metrics = {"class_id": [categorical_crossentropy, categorical_accuracy, self.mse, self.variance_in_loss]}
@@ -123,3 +120,12 @@ class FashionMnistMetrics(Metrics):
 
         mean = tf.reduce_mean(L)
         return mean_squared_error(mean, L)
+
+
+if __name__ == "__main__":
+    #stf.modules.log_inputs = True
+    #stf.modules.log_calls = True
+    #stf.modules.log_creations = True
+
+    hyperparams = FashionMnistParams()
+    stf.train(hyperparams)
