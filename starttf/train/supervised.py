@@ -169,7 +169,7 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, metrics=None,
         augment_train = None
         augment_test = None
         if "augment" in hyperparams.arch.__dict__:
-            if isinstance(hyperparams.arch.prepare, str):
+            if isinstance(hyperparams.arch.augment, str):
                 p = ".".join(hyperparams.arch.augment.split(".")[:-1])
                 n = hyperparams.arch.augment.split(".")[-1]
                 arch_augment = __import__(p, fromlist=[n])
