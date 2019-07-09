@@ -13,7 +13,7 @@ class FashionMnistParams(stf.HyperParams):
         super().__init__()
         self.problem.number_of_categories = 10
         self.problem.base_dir = "datasets"
-        #self.problem.tf_records_path = "tfrecords"
+        self.problem.tf_records_path = "tfrecords"
 
         self.train.epochs = 20
         self.train.l2_weight = 0.01

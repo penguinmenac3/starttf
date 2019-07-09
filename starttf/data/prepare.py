@@ -73,8 +73,8 @@ def buffer_dataset_as_tfrecords(hyperparams):
         copyfile(f, f_backup)
 
     # Write the data
-    write_data(hyperparams, PHASE_TRAIN, training_data, 8)
-    write_data(hyperparams, PHASE_VALIDATION, validation_data, 8)
+    write_data(hyperparams, PHASE_TRAIN, training_data, 8, num_threads=1, multi_processing=False)
+    write_data(hyperparams, PHASE_VALIDATION, validation_data, 8, num_threads=1, multi_processing=False)
 
 
 def _bytes_feature(value):
