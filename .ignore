@@ -1,0 +1,5 @@
+checkpoints
+tfrecords
+dist
+docs
+*.code-workspace
