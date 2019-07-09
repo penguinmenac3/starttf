@@ -56,11 +56,16 @@ def format_time(t):
 
 
 # @tf.function
-def __train(model, dataset, samples_per_epoch, optimizer, loss, metrics):
+def _train(model, dataset, samples_per_epoch, optimizer, loss, metrics):
     i = 0
     N = int(samples_per_epoch / starttf.hyperparams.train.batch_size - 0.00001) + 1
+    # Setup the training loop
     tf.keras.backend.set_learning_phase(1)
+    loss.reset_avg()
+    metrics.reset_avg()
+    # Loop over the dataset and update weights.
     for x, y in dataset:
+        # Forward pass, computing gradients and applying them
         with tf.GradientTape() as tape:
             prediction = model(**x)
             loss_results = loss(y, prediction)
@@ -68,24 +73,26 @@ def __train(model, dataset, samples_per_epoch, optimizer, loss, metrics):
         variables = model.trainable_variables
         gradients = tape.gradient(loss_results, variables)
         optimizer.apply_gradients(zip(gradients, variables))
+        
+        # Update global variables and log the variables
         starttf.train.samples_seen = starttf.train.samples_seen + starttf.hyperparams.train.batch_size
         print("\rBatch {}/{} - Loss {:.3f}".format(i + 1, N, loss_results), end="")
         if i % starttf.hyperparams.train.log_steps == 0:
             tf.summary.scalar('hyperparams/lr', optimizer.lr, step=starttf.train.samples_seen)
-            for k in loss.values:
-                tf.summary.scalar("loss/{}".format(k), loss.values[k],
-                                  step=starttf.train.samples_seen)
-            for k in metrics.values:
-                tf.summary.scalar("metrics/{}".format(k),
-                                  metrics.values[k], step=starttf.train.samples_seen)
+            loss.summary()
+            loss.reset_avg()
+            metrics.summary()
+            metrics.reset_avg()
         i += 1
     tf.keras.backend.set_learning_phase(0)
 
 
 # @tf.function
-def __validate(model, dataset, samples_per_epoch, loss, metrics):
+def _validate(model, dataset, samples_per_epoch, loss, metrics):
     tf.keras.backend.set_learning_phase(0)
     samples = 0
+    loss.reset_avg()
+    metrics.reset_avg()
     for x, y in dataset:
         prediction = model(**x)
         loss(y, prediction)
@@ -93,12 +100,8 @@ def __validate(model, dataset, samples_per_epoch, loss, metrics):
         samples += starttf.hyperparams.train.batch_size
         if samples >= samples_per_epoch:
             break
-    for k in loss.avg:
-        tf.summary.scalar("loss/{}".format(k), loss.avg[k],
-                          step=starttf.train.samples_seen)
-    for k in metrics.avg:
-        tf.summary.scalar("metrics/{}".format(k),
-                          metrics.avg[k], step=starttf.train.samples_seen)
+    loss.summary()
+    metrics.summary()
     return loss.avg, metrics.avg
 
 
@@ -106,7 +109,7 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, metrics=None,
                             training_data=None, validation_data=None,
                             optimizer=None, epochs=None,
                             continue_training=False, continue_with_specific_checkpointpath=None,
-                            train_fn=__train, validation_fn=__validate, create_optimizer=create_keras_optimizer):
+                            train_fn=_train, validation_fn=_validate, create_optimizer=create_keras_optimizer):
     check_completness(hyperparams)
     starttf.hyperparams = hyperparams
     time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
@@ -226,14 +229,10 @@ def easy_train_and_evaluate(hyperparams, model=None, loss=None, metrics=None,
     start = time.time()
     for i in range(epochs):
         lr_scheduler.on_epoch_begin(i)
-        loss.reset()
-        metrics.reset()
         with train_summary_writer.as_default():
             train_fn(
                 model, training_data, training_samples, optimizer, loss, metrics)
         lr_scheduler.on_epoch_end(i)
-        loss.reset()
-        metrics.reset()
         with val_summary_writer.as_default():
             loss_results, metrics_results = validation_fn(
                 model, validation_data, validation_samples, loss, metrics)

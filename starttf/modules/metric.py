@@ -31,8 +31,13 @@ class Metrics(tf.Module):
         self.avg = {}
         self.values = {}
 
-    def reset(self):
+    def reset_avg(self):
         pass
+
+    def summary(self):
+        for k in self.values:
+            tf.summary.scalar("metrics/{}".format(k), self.values[k],
+                                step=starttf.train.samples_seen)
 
     def __call__(self, y_true, y_pred):
         if self.metrics is None:
