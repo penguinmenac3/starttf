@@ -55,7 +55,7 @@ def format_time(t):
     return '%d:%02d:%02d' % (hours, minutes, seconds)
 
 
-# @tf.function
+#@tf.function
 def _train(model, dataset, samples_per_epoch, optimizer, loss, metrics):
     i = 0
     N = int(samples_per_epoch / starttf.hyperparams.train.batch_size - 0.00001) + 1
@@ -76,6 +76,7 @@ def _train(model, dataset, samples_per_epoch, optimizer, loss, metrics):
         
         # Update global variables and log the variables
         starttf.train.samples_seen = starttf.train.samples_seen + starttf.hyperparams.train.batch_size
+        # FIXME TypeError: unsupported format string passed to Tensor.__format__
         print("\rBatch {}/{} - Loss {:.3f}".format(i + 1, N, loss_results), end="")
         if i % starttf.hyperparams.train.log_steps == 0:
             tf.summary.scalar('hyperparams/lr', optimizer.lr, step=starttf.train.samples_seen)
@@ -87,7 +88,7 @@ def _train(model, dataset, samples_per_epoch, optimizer, loss, metrics):
     tf.keras.backend.set_learning_phase(0)
 
 
-# @tf.function
+#@tf.function
 def _validate(model, dataset, samples_per_epoch, loss, metrics):
     tf.keras.backend.set_learning_phase(0)
     samples = 0

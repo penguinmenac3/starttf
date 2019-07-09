@@ -87,6 +87,7 @@ class FashionMnistModel(stf.Model):
         self.linear.append(BatchNormalization())
         self.linear.append(Dense(units=num_outputs, activation="softmax", kernel_initializer=Orthogonal()))
 
+    @tf.function
     def forward(self, features, training=False):
         net = features
         for l in self.linear:
@@ -105,15 +106,18 @@ class FashionMnistMetrics(stf.Metrics):
         super().__init__(name="FashionMnistLoss")
         self.metrics = {"class_id": [categorical_crossentropy, categorical_accuracy, self.mse, self.variance_in_loss]}
 
+    @tf.function
     def categorical_variance_loss(self, y_true, y_pred):
         L = categorical_crossentropy(y_true, y_pred)
 
         mean = tf.reduce_mean(L)
         return tf.reduce_mean(L) + mean_squared_error(mean, L)
 
+    @tf.function
     def mse(self, y_true, y_pred):
         return mean_squared_error(y_true, y_pred)
 
+    @tf.function
     def variance_in_loss(self, y_true, y_pred):
         # Compute Loss
         L = categorical_crossentropy(y_true, y_pred)

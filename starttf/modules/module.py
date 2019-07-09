@@ -29,7 +29,7 @@ class Model(tf.keras.Model):
     def __init__(self, name, **kwargs):
         if starttf.modules.log_calls:
             print("{}.__init__".format(name))
-        super().__init__(name=name)
+        super(Model, self).__init__(name=name)
         if starttf.hyperparams is None and starttf.hyperparams is not starttf.NO_PARAMS:
             raise RuntimeWarning(
                 "You did not set starttf.modules.hyperparams. You may want to consider setting it to starttf.modules.NO_PARAMS if this was intentional.")
@@ -46,14 +46,14 @@ class Model(tf.keras.Model):
                 print(" {}: {}".format(k, kwargs[k]))
             print()
         if len(args) > 0:
-            return super().__call__(*args, **kwargs)
+            return super(Model, self).__call__(*args, **kwargs)
         else:
             if "training" in kwargs:
                 training = kwargs["training"]
                 del kwargs["training"]
-                return super().__call__(kwargs, training=training)
+                return super(Model, self).__call__(kwargs, training=training)
             else:
-                return super().__call__(kwargs)
+                return super(Model, self).__call__(kwargs)
 
     def call(self, kwargs, training=False):
         return self.forward(training=training, **kwargs)
@@ -66,7 +66,7 @@ class Layer(tf.keras.layers.Layer):
     def __init__(self, name, **kwargs):
         if starttf.modules.log_calls:
             print("{}.__init__".format(name))
-        super().__init__(name=name)
+        super(Layer, self).__init__(name=name)
         if starttf.hyperparams is None and starttf.hyperparams is not starttf.NO_PARAMS:
             raise RuntimeWarning(
                 "You did not set starttf.modules.hyperparams. You may want to consider setting it to starttf.modules.NO_PARAMS if this was intentional.")
@@ -83,14 +83,14 @@ class Layer(tf.keras.layers.Layer):
                 print(" {}: {}".format(k, kwargs[k]))
             print()
         if len(args) > 0:
-            return super().__call__(*args, **kwargs)
+            return super(Layer, self).__call__(*args, **kwargs)
         else:
             if "training" in kwargs:
                 training = kwargs["training"]
                 del kwargs["training"]
-                return super().__call__(kwargs, training=training)
+                return super(Layer, self).__call__(kwargs, training=training)
             else:
-                return super().__call__(kwargs)
+                return super(Layer, self).__call__(kwargs)
 
     def call(self, kwargs, training=False):
         return self.forward(training=training, **kwargs)
