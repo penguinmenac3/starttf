@@ -1,11 +1,11 @@
 import starttf
 import os
 import numpy as np
-from examples.fashion_mnist import FashionMnistModel, FashionMnistDataset, FashionMnistParams
+from examples.fashion_mnist import FashionMnistModel, FashionMnistDataset, FashionMnistConfig
 
 
 def main():
-    hyperparams = FashionMnistParams()
+    hyperparams = FashionMnistConfig()
     hyperparams.train.batch_size = 1
     starttf.hyperparams = hyperparams
     dataset = FashionMnistDataset(hyperparams, "validation")

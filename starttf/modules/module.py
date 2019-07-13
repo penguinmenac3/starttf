@@ -30,10 +30,6 @@ class Model(tf.keras.Model):
         if starttf.modules.log_calls:
             print("{}.__init__".format(name))
         super(Model, self).__init__(name=name)
-        if starttf.hyperparams is None and starttf.hyperparams is not starttf.NO_PARAMS:
-            raise RuntimeWarning(
-                "You did not set starttf.modules.hyperparams. You may want to consider setting it to starttf.modules.NO_PARAMS if this was intentional.")
-        self.hyperparams = starttf.hyperparams
         self.__dict__.update(kwargs)
 
     def __call__(self, *args, **kwargs):
@@ -67,10 +63,6 @@ class Layer(tf.keras.layers.Layer):
         if starttf.modules.log_calls:
             print("{}.__init__".format(name))
         super(Layer, self).__init__(name=name)
-        if starttf.hyperparams is None and starttf.hyperparams is not starttf.NO_PARAMS:
-            raise RuntimeWarning(
-                "You did not set starttf.modules.hyperparams. You may want to consider setting it to starttf.modules.NO_PARAMS if this was intentional.")
-        self.hyperparams = starttf.hyperparams
         self.__dict__.update(kwargs)
 
     def __call__(self, *args, **kwargs):

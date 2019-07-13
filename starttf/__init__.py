@@ -29,17 +29,11 @@ PHASE_TEST = "test"
 NO_PARAMS = object()
 hyperparams = None
 
-from starttf.annotations import RunOnce
-
-from starttf.data.simple_sequence import Sequence
-from starttf.data.prepare import buffer_dataset_as_tfrecords, create_input_fn, write_data
-
 from starttf.modules.module import Model, Layer
 from starttf.modules.loss import Loss
 from starttf.modules.metric import Metrics
 
-from starttf.train.params import HyperParams
-from starttf.train.keras import easy_train_and_evaluate as train_keras
-from starttf.train.supervised import easy_train_and_evaluate as train
+from starttf.train.keras import fit as train_keras
+from starttf.train.supervised import fit as fit_supervised
 # TODO enable line once implemented
 #from starttf.train.estimators import easy_train_and_evaluate as train_estimator

@@ -6,9 +6,13 @@ from tensorflow.keras.regularizers import l2
 from tensorflow.keras.losses import categorical_crossentropy, mean_squared_error
 from tensorflow.keras.metrics import categorical_accuracy
 from tensorflow.keras.initializers import Orthogonal
+import ailab
+from ailab.experiment import Config
+from ailab.data import DataProvider, DataProviderPipeline, BatchedDataProvider
+
 import starttf as stf
 
-class FashionMnistParams(stf.HyperParams):
+class FashionMnistConfig(Config):
     def __init__(self):
         super().__init__()
         self.problem.number_of_categories = 10
@@ -28,12 +32,12 @@ class FashionMnistParams(stf.HyperParams):
         self.arch.model = FashionMnistModel
         self.arch.loss = FashionMnistLoss
         self.arch.metrics = FashionMnistMetrics
-        self.arch.prepare = FashionMnistDataset
+        self.arch.prepare = DataProviderPipeline(FashionMnistDataset, BatchedDataProvider)
 
 
-class FashionMnistDataset(stf.Sequence):
-    def __init__(self, hyperparams, phase, augmentation_fn=None):
-        super().__init__(hyperparams, phase, augmentation_fn=augmentation_fn)
+class FashionMnistDataset(DataProvider):
+    def __init__(self, config, phase):
+        super().__init__(config, phase)
         ((trainX, trainY), (valX, valY)) = fashion_mnist.load_data()
         self.trainX = trainX
         self.trainY = trainY
@@ -41,13 +45,13 @@ class FashionMnistDataset(stf.Sequence):
         self.valY = valY
         self.training = phase == "train"
 
-    def num_samples(self):
+    def __len__(self):
         if self.training:
             return len(self.trainX)
         else:
             return len(self.valX)
 
-    def get_sample(self, idx):
+    def __getitem__(self, idx):
         label = np.zeros(shape=(10,), dtype="float32")
         if self.training:
             label[self.trainY[idx]] = 1
@@ -60,8 +64,8 @@ class FashionMnistDataset(stf.Sequence):
 class FashionMnistModel(stf.Model):
     def __init__(self, name="FashionMnistModel"):
         super().__init__(name)
-        l2_weight = self.hyperparams.train.l2_weight
-        num_outputs = self.hyperparams.problem.number_of_categories
+        l2_weight = ailab.config.train.l2_weight
+        num_outputs = ailab.config.problem.number_of_categories
         self.linear = []
         self.linear.append(Lambda(lambda x: tf.keras.backend.expand_dims(x)))
         self.linear.append(BatchNormalization())
@@ -131,5 +135,5 @@ if __name__ == "__main__":
     #stf.modules.log_calls = True
     #stf.modules.log_creations = True
 
-    hyperparams = FashionMnistParams()
-    stf.train(hyperparams)
+    config = FashionMnistConfig()
+    stf.fit_supervised(config)
