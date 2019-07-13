@@ -48,7 +48,8 @@ def create_keras_callbacks(hyperparams, log_dir, no_artifacts=False):
 class TrainValTensorBoard(tf.keras.callbacks.TensorBoard):
     def __init__(self, log_dir='./logs', summary_steps=None, **kwargs):
         # Make the original `TensorBoard` log to a subdirectory 'training'
-        training_log_dir = os.path.join(log_dir, 'train')
+        #training_log_dir = os.path.join(log_dir, 'train')
+        training_log_dir = log_dir
         super(TrainValTensorBoard, self).__init__(training_log_dir, **kwargs)
 
         # Log the validation metrics to a separate subdirectory
