@@ -7,6 +7,7 @@ from tensorflow.keras.losses import categorical_crossentropy, mean_squared_error
 from tensorflow.keras.metrics import categorical_accuracy
 from tensorflow.keras.initializers import Orthogonal
 import ailab
+from ailab import PHASE_TRAIN, PHASE_VALIDATION
 from ailab.experiment import Config
 from ailab.data import DataProvider, DataProviderPipeline, BatchedDataProvider
 
@@ -43,7 +44,7 @@ class FashionMnistDataset(DataProvider):
         self.trainY = trainY
         self.valX = valX
         self.valY = valY
-        self.training = phase == "train"
+        self.training = phase == PHASE_TRAIN
 
     def __len__(self):
         if self.training:
