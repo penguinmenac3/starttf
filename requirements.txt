@@ -1,4 +1,3 @@
-hyperparams
 numpy
 scikit-image
 scipy
