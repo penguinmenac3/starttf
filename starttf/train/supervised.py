@@ -58,16 +58,14 @@ def format_time(t):
 
 #@tf.function
 def _train(config, model, dataset, samples_per_epoch, optimizer, loss, metrics):
-    i = 0
     N = int(samples_per_epoch / config.train.batch_size - 0.00001) + 1
     
     # Setup the training loop
-    tf.keras.backend.set_learning_phase(1)
     loss.reset_avg()
     metrics.reset_avg()
 
     # Loop over the dataset and update weights.
-    for x, y in dataset:
+    for i, (x, y) in enumerate(dataset):
         # Forward pass, computing gradients and applying them
         with tf.GradientTape() as tape:
             prediction = model(**x)
@@ -80,28 +78,29 @@ def _train(config, model, dataset, samples_per_epoch, optimizer, loss, metrics):
         # Update global variables and log the variables
         stf.train.samples_seen = stf.train.samples_seen + config.train.batch_size
         # FIXME TypeError: unsupported format string passed to Tensor.__format__
-        print("\rBatch {}/{} - Loss {:.3f}".format(i + 1, N, loss_results), end="")
+        print("\rTraining {}/{} - Loss {:.3f}".format(i + 1, N, loss.avg["total"]), end="")
         if i % config.train.log_steps == 0:
             tf.summary.scalar('learning_rate', optimizer.lr, step=stf.train.samples_seen)
             loss.summary()
             metrics.summary()
-        i += 1
-    tf.keras.backend.set_learning_phase(0)
+    print()
 
 
 #@tf.function
 def _validate(config, model, dataset, samples_per_epoch, loss, metrics):
-    tf.keras.backend.set_learning_phase(0)    
+    N = int(samples_per_epoch / config.train.batch_size - 0.00001) + 1    
     samples = 0
-    for x, y in dataset:
+    for i, (x, y) in enumerate(dataset):
         prediction = model(**x)
         loss(y, prediction)
         metrics(y, prediction)
+        print("\rValidating {}/{} - Loss {:.3f}".format(i, N, loss.avg["total"]), end="")
         samples += config.train.batch_size
         if samples >= samples_per_epoch:
             break
     loss.summary()
     metrics.summary()
+    print()
     return loss.avg, metrics.avg
 
 
@@ -142,14 +141,16 @@ def fit(config, model=None, loss=None, metrics=None,
     start = time.time()
     for i in range(epochs):
         lr_scheduler.on_epoch_begin(i)
+
         loss.reset_avg()
         metrics.reset_avg()
-
+        tf.keras.backend.set_learning_phase(1)
         with train_summary_writer.as_default():
             train_fn(config, model, training_data, training_samples, optimizer, loss, metrics)
         
         loss.reset_avg()
         metrics.reset_avg()
+        tf.keras.backend.set_learning_phase(0)
         with val_summary_writer.as_default():
             loss_results, metrics_results = validation_fn(config, model, validation_data, validation_samples, loss, metrics)
 
